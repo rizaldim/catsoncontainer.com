@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>MongoDB SRV connection string and default tls parameter</title>
+		<meta name="description" content="MongoDB SRV connection string and default tls parameter">
+		<link rel="alternate" href="feed/feed.xml" type="application/atom+xml" title="Rizaldi&#39;s Personal Website">
+		
+		<style>/**
+ * okaidia theme for JavaScript, CSS and HTML
+ * Loosely based on Monokai textmate theme by http://www.monokai.nl/
+ * @author ocodia
+ */
+
+code[class*="language-"],
+pre[class*="language-"] {
+	color: #f8f8f2;
+	background: none;
+	text-shadow: 0 1px rgba(0, 0, 0, 0.3);
+	font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+	font-size: 1em;
+	text-align: left;
+	white-space: pre;
+	word-spacing: normal;
+	word-break: normal;
+	word-wrap: normal;
+	line-height: 1.5;
+
+	-moz-tab-size: 4;
+	-o-tab-size: 4;
+	tab-size: 4;
+
+	-webkit-hyphens: none;
+	-moz-hyphens: none;
+	-ms-hyphens: none;
+	hyphens: none;
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+	padding: 1em;
+	margin: .5em 0;
+	overflow: auto;
+	border-radius: 0.3em;
+}
+
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+	background: #272822;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+	padding: .1em;
+	border-radius: .3em;
+	white-space: normal;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+	color: #8292a2;
+}
+
+.token.punctuation {
+	color: #f8f8f2;
+}
+
+.token.namespace {
+	opacity: .7;
+}
+
+.token.property,
+.token.tag,
+.token.constant,
+.token.symbol,
+.token.deleted {
+	color: #f92672;
+}
+
+.token.boolean,
+.token.number {
+	color: #ae81ff;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+	color: #a6e22e;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string,
+.token.variable {
+	color: #f8f8f2;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.function,
+.token.class-name {
+	color: #e6db74;
+}
+
+.token.keyword {
+	color: #66d9ef;
+}
+
+.token.regex,
+.token.important {
+	color: #fd971f;
+}
+
+.token.important,
+.token.bold {
+	font-weight: bold;
+}
+.token.italic {
+	font-style: italic;
+}
+
+.token.entity {
+	cursor: help;
+}
+/*
+ * New diff- syntax
+ */
+
+pre[class*="language-diff-"] {
+	--eleventy-code-padding: 1.25em;
+	padding-left: var(--eleventy-code-padding);
+	padding-right: var(--eleventy-code-padding);
+}
+.token.deleted {
+	background-color: hsl(0, 51%, 37%);
+	color: inherit;
+}
+.token.inserted {
+	background-color: hsl(126, 31%, 39%);
+	color: inherit;
+}
+
+/* Make the + and - characters unselectable for copy/paste */
+.token.prefix.unchanged,
+.token.prefix.inserted,
+.token.prefix.deleted {
+	-webkit-user-select: none;
+	user-select: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding-top: 2px;
+	padding-bottom: 2px;
+}
+.token.prefix.inserted,
+.token.prefix.deleted {
+	width: var(--eleventy-code-padding);
+	background-color: rgba(0,0,0,.2);
+}
+
+/* Optional: full-width background color */
+.token.inserted:not(.prefix),
+.token.deleted:not(.prefix) {
+	display: block;
+	margin-left: calc(-1 * var(--eleventy-code-padding));
+	margin-right: calc(-1 * var(--eleventy-code-padding));
+	text-decoration: none; /* override del, ins, mark defaults */
+	color: inherit; /* override del, ins, mark defaults */
+}
+/* This is an arbitrary CSS string added to the bundle */
+/* Defaults */
+:root {
+	--font-family: -apple-system, system-ui, sans-serif;
+	--font-family-monospace: Consolas, Menlo, Monaco, Andale Mono WT, Andale Mono, Lucida Console, Lucida Sans Typewriter, DejaVu Sans Mono, Bitstream Vera Sans Mono, Liberation Mono, Nimbus Mono L, Courier New, Courier, monospace;
+}
+
+/* Theme colors */
+:root {
+	--color-gray-20: #e0e0e0;
+	--color-gray-50: #C0C0C0;
+	--color-gray-90: #333;
+
+	--background-color: #fff;
+
+	--text-color: var(--color-gray-90);
+	--text-color-link: #082840;
+	--text-color-link-active: #5f2b48;
+	--text-color-link-visited: #17050F;
+
+	--syntax-tab-size: 2;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-gray-20: #e0e0e0;
+		--color-gray-50: #C0C0C0;
+		--color-gray-90: #dad8d8;
+
+		/* --text-color is assigned to --color-gray-_ above */
+		--text-color-link: #1493fb;
+		--text-color-link-active: #6969f7;
+		--text-color-link-visited: #a6a6f8;
+
+		--background-color: #15202b;
+	}
+}
+
+
+/* Global stylesheet */
+* {
+	box-sizing: border-box;
+}
+
+@view-transition {
+	navigation: auto;
+}
+
+html,
+body {
+	padding: 0;
+	margin: 0 auto;
+	font-family: var(--font-family);
+	color: var(--text-color);
+	background-color: var(--background-color);
+}
+html {
+	overflow-y: scroll;
+}
+body {
+	max-width: 80ch;
+}
+
+/* https://www.a11yproject.com/posts/how-to-hide-content/ */
+.visually-hidden {
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	height: 1px;
+	overflow: hidden;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+
+/* Fluid images via https://www.zachleat.com/web/fluid-images/ */
+img {
+  max-width: 100%;
+}
+img[width][height] {
+  height: auto;
+}
+img[src$=".svg"] {
+  width: 100%;
+  height: auto;
+  max-width: none;
+}
+
+p:last-child {
+	margin-bottom: 0;
+}
+p {
+	line-height: 1.5;
+}
+
+li {
+	line-height: 1.5;
+}
+
+a[href] {
+	color: var(--text-color-link);
+}
+a[href]:visited {
+	color: var(--text-color-link-visited);
+}
+a[href]:hover,
+a[href]:active {
+	color: var(--text-color-link-active);
+}
+
+main,
+footer {
+	padding: 1rem;
+}
+main :first-child {
+	margin-top: 0;
+}
+
+header {
+	border-bottom: 1px dashed var(--color-gray-20);
+}
+header:after {
+	content: "";
+	display: table;
+	clear: both;
+}
+
+.links-nextprev {
+	display: flex;
+	justify-content: space-between;
+	gap: .5em 1em;
+	list-style: "";
+	border-top: 1px dashed var(--color-gray-20);
+	padding: 1em 0;
+}
+.links-nextprev > * {
+	flex-grow: 1;
+}
+.links-nextprev-next {
+	text-align: right;
+}
+
+table {
+	margin: 1em 0;
+}
+table td,
+table th {
+	padding-right: 1em;
+}
+
+pre,
+code {
+	font-family: var(--font-family-monospace);
+}
+pre:not([class*="language-"]) {
+	margin: .5em 0;
+	line-height: 1.375; /* 22px /16 */
+	-moz-tab-size: var(--syntax-tab-size);
+	-o-tab-size: var(--syntax-tab-size);
+	tab-size: var(--syntax-tab-size);
+	-webkit-hyphens: none;
+	-ms-hyphens: none;
+	hyphens: none;
+	direction: ltr;
+	text-align: left;
+	white-space: pre;
+	word-spacing: normal;
+	word-break: normal;
+	overflow-x: auto;
+}
+code {
+	word-break: break-all;
+}
+
+/* Header */
+header {
+	display: flex;
+	gap: 1em .5em;
+	flex-wrap: wrap;
+	align-items: center;
+	padding: 1em;
+}
+.home-link {
+	font-size: 1em; /* 16px /16 */
+	font-weight: 700;
+	margin-right: 2em;
+}
+.home-link:link:not(:hover) {
+	text-decoration: none;
+}
+
+/* Nav */
+.nav {
+	display: flex;
+	padding: 0;
+	margin: 0;
+	list-style: none;
+}
+.nav-item {
+	display: inline-block;
+	margin-right: 1em;
+}
+.nav-item a[href]:not(:hover) {
+	text-decoration: none;
+}
+.nav a[href][aria-current="page"] {
+	text-decoration: underline;
+}
+
+/* Posts list */
+.postlist {
+	list-style: none;
+	padding: 0;
+	padding-left: 1.5rem;
+}
+.postlist-item {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	counter-increment: start-from -1;
+	margin-bottom: 1em;
+}
+.postlist-item:before {
+	display: inline-block;
+	pointer-events: none;
+	content: "" counter(start-from, decimal-leading-zero) ". ";
+	line-height: 100%;
+	text-align: right;
+	margin-left: -1.5rem;
+}
+.postlist-date,
+.postlist-item:before {
+	font-size: 0.8125em; /* 13px /16 */
+	color: var(--color-gray-90);
+}
+.postlist-date {
+	word-spacing: -0.5px;
+}
+.postlist-link {
+	font-size: 1.1875em; /* 19px /16 */
+	font-weight: 700;
+	flex-basis: calc(100% - 1.5rem);
+	padding-left: .25em;
+	padding-right: .5em;
+	text-underline-position: from-font;
+	text-underline-offset: 0;
+	text-decoration-thickness: 1px;
+}
+.postlist-item-active .postlist-link {
+	font-weight: bold;
+}
+
+/* Tags */
+.post-tag {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	text-transform: capitalize;
+	font-style: italic;
+}
+.postlist-item > .post-tag {
+	align-self: center;
+}
+
+/* Tags list */
+.post-metadata {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: .5em;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+.post-metadata time {
+	margin-right: 1em;
+}</style>
+	</head>
+	<body>
+		<a href="#skip" class="visually-hidden">Skip to main content</a>
+
+		<header>
+			<a href="/" class="home-link">Rizaldi&#39;s Personal Website</a>
+			<nav>
+				<h2 class="visually-hidden" id="top-level-navigation-menu">Top level navigation menu</h2>
+				<ul class="nav">
+					<li class="nav-item"><a href="/">Home</a></li>
+					<li class="nav-item"><a href="/blog/">Archive</a></li>
+					<li class="nav-item"><a href="/about/">About</a></li>
+					<li class="nav-item"><a href="/feed/feed.xml">Feed</a></li>
+				</ul>
+			</nav>
+		</header>
+
+		<main id="skip">
+			<heading-anchors>
+				
+<h1 id="mongodb-srv-connection-string-and-default-tls-parameter">MongoDB SRV connection string and default tls parameter</h1>
+
+<ul class="post-metadata">
+	<li><time datetime="2025-01-25">25 January 2025</time></li>
+	<li><a href="/tags/mongodb/" class="post-tag">mongodb</a>, </li>
+	<li><a href="/tags/tls/" class="post-tag">tls</a></li>
+</ul>
+
+<h2 id="context">Context</h2>
+<p>If we use MongoDB Atlas, the connection string provided to be used to connect
+the cluster is using
+<a href="https://www.mongodb.com/docs/manual/reference/connection-string/#srv-connection-format">SRV connection format</a>.
+So instead of using <code>mongodb://</code> in the connection string, it will be <code>mongodb+srv://</code>.</p>
+<p>The advantage of using this is that if I have a MongoDB replica set with 3 nodes,
+using the standard connection format (the <code>mongodb://</code> one) I will set the
+connection string like this:</p>
+<pre><code>mongodb://username:password@db-1.example.com:27017,db-2.example.com:27017,db-3.example.com:27017/db?authSource=admin&amp;replicaSet=myRepl
+</code></pre>
+<p>I think I can leave out the port to make it shorter, I am not sure. But yeah
+it's a bit too long. It's possible to just mention 1 node instead of all three
+but it's not recommended. If I use the <code>db-1.example.com</code> one and then that
+node is down then the db client will not be able to find the rest of the
+replica set and it will not be able to connect to it.</p>
+<p>Using SRV connection format, I can use something like this:</p>
+<pre><code>mongodb+srv://username:password@db-rs.example.com/db
+</code></pre>
+<p>So how does it work really? Seems like there is less information in that connection string
+and somehow it works. The client can find out all of the nodes inside the replica set
+and the parameters used for the connection string.</p>
+<h2 id="srv-dns-record">SRV DNS record</h2>
+<p>Turns out there is a type of DNS record called SRV.
+<a href="https://www.cloudflare.com/learning/dns/dns-records/dns-srv-record/">This page in Cloudflare learning site</a>
+explains it well. In summary this type of record is a DNS service record, hence
+the name SRV I assume. The format is the following:</p>
+<pre><code>_service._proto.name. TTL class type of record priority weight port target.
+</code></pre>
+<p>So let's say that I have a MongoDB replica set. It has 3 nodes. The nodes are
+accessible using these addresses: <strong>rs-node-1.rizaldi.net</strong>, <strong>rs-node-2.rizaldi.net</strong>, and
+<strong>rs-node-3.rizaldi.net</strong>. I want this replica set to be accessible through
+<strong>db.rizaldi.net</strong> domain. For this I will create 3 DNS records with type SRV for
+the host <strong>_mongodb._tcp.db.rizaldi.net</strong>. The way to create these records will probably differ
+for each DNS manager that you use. In Porkbun it looks like the following.</p>
+<picture><source type="image/avif" srcset="/blog/mongodb-srv-and-tls/NYCcNZLOIo-1676.avif 1676w"><source type="image/webp" srcset="/blog/mongodb-srv-and-tls/NYCcNZLOIo-1676.webp 1676w"><img loading="lazy" decoding="async" src="/blog/mongodb-srv-and-tls/NYCcNZLOIo-1676.png" alt="Form to add SRV record in Porkbun" width="1676" height="1100"></picture>
+<p>Using the above form for my use case, I will need to create 3 DNS records. For
+the first one I will fill in the form with:</p>
+<ul>
+<li><strong>Host</strong>: _mongodb._tcp.db.rizaldi.net</li>
+<li><strong>Answer/Value</strong>: <code>0 27017 rs-node-1.rizaldi.net</code></li>
+<li><strong>Priority</strong>: 0</li>
+</ul>
+<p>The other two records will be the same except for the <code>rs-node-1</code> part. It will
+be <code>rs-node-2</code> and <code>rs-node-3</code> respectively.</p>
+<p>Why do I use 0 for priority and weight? To be honest I just copy the setup from
+MongoDB Atlas. When I queried the DNS record for my MongoDB Atlas cluster's DNS
+I found that it uses 0 as priority and weight. I haven't experimented with
+changing the values yet.</p>
+<h2 id="additional-txt-record">Additional TXT record</h2>
+<p>Another thing to note is that MongoDB client will also look for a TXT record
+for the domain used in the connection string. The value of this TXT record will
+be the parameter of the connection string. For my sample use case I need to add
+a TXT record for <code>db.rizaldi.net</code> with value <code>authSource=admin&amp;replicaSet=rs0</code>.
+This is to tell the MongoDB client to use <code>admin</code> database as the
+authentication database and the name of replica set is <code>rs0</code>.</p>
+<h2 id="the-implied-tls-parameter">The implied tls parameter</h2>
+<p>When I did the experiment of setting up the DNS for MongoDB replica set, I
+still couldn't connect to the replica set even though I was sure that I already
+configured the DNS records in the correct way.</p>
+<p>The funny thing is I could connect to the replica set using standard MongoDB
+connection string, by mentioning one or all the nodes of the replica set in the
+connection string.</p>
+<p>To investigate it I run a python script that I found in
+<a href="https://www.mongodb.com/developer/products/mongodb/srv-connection-strings/">MongoDB developer site</a>.</p>
+<pre class="language-python" tabindex="0"><code class="language-python"><span class="token keyword">import</span> srvlookup <span class="token comment">#pip install srvlookup</span>
+<span class="token keyword">import</span> sys
+<span class="token keyword">import</span> dns<span class="token punctuation">.</span>resolver <span class="token comment">#pip install dnspython</span>
+
+host <span class="token operator">=</span> <span class="token boolean">None</span>
+
+<span class="token keyword">if</span> <span class="token builtin">len</span><span class="token punctuation">(</span>sys<span class="token punctuation">.</span>argv<span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">1</span> <span class="token punctuation">:</span>
+   host <span class="token operator">=</span> sys<span class="token punctuation">.</span>argv<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>
+
+<span class="token keyword">if</span> host <span class="token punctuation">:</span>
+   services <span class="token operator">=</span> srvlookup<span class="token punctuation">.</span>lookup<span class="token punctuation">(</span><span class="token string">"mongodb"</span><span class="token punctuation">,</span> domain<span class="token operator">=</span>host<span class="token punctuation">)</span>
+   <span class="token keyword">for</span> i <span class="token keyword">in</span> services<span class="token punctuation">:</span>
+      <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"%s:%i"</span> <span class="token operator">%</span> <span class="token punctuation">(</span>i<span class="token punctuation">.</span>hostname<span class="token punctuation">,</span> i<span class="token punctuation">.</span>port<span class="token punctuation">)</span><span class="token punctuation">)</span>
+   <span class="token keyword">for</span> txtrecord <span class="token keyword">in</span> dns<span class="token punctuation">.</span>resolver<span class="token punctuation">.</span>query<span class="token punctuation">(</span>host<span class="token punctuation">,</span> <span class="token string">'TXT'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+      <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"%s: %s"</span> <span class="token operator">%</span> <span class="token punctuation">(</span> host<span class="token punctuation">,</span> txtrecord<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token keyword">else</span><span class="token punctuation">:</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"No host specified"</span><span class="token punctuation">)</span></code></pre>
+<p>I ran the script first using my MongoDB Atlas cluster domain as host. Then using
+my newly setup MongoDB replica set as host. Then I compared the result. From my
+understanding my setup should work since the output of the script is as expected.</p>
+<p>Then I got an idea to run a simple javascript program for connecting the replica
+set. The script is from the MongoDB official node client's README file with
+some modifications.</p>
+<pre class="language-javascript" tabindex="0"><code class="language-javascript"><span class="token keyword">const</span> <span class="token punctuation">{</span> MongoClient <span class="token punctuation">}</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'mongodb'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Connection URL</span>
+<span class="token keyword">const</span> url <span class="token operator">=</span> <span class="token string">'mongodb+srv://user:pass@db.rizaldi.net'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> client <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MongoClient</span><span class="token punctuation">(</span>url<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+client<span class="token punctuation">.</span><span class="token function">on</span><span class="token punctuation">(</span><span class="token string">'commandStarted'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token operator">=></span> console<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>event<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+client<span class="token punctuation">.</span><span class="token function">on</span><span class="token punctuation">(</span><span class="token string">'commandSucceeded'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token operator">=></span> console<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>event<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+client<span class="token punctuation">.</span><span class="token function">on</span><span class="token punctuation">(</span><span class="token string">'commandFailed'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token operator">=></span> console<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>event<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Use connect method to connect to the server</span>
+  <span class="token keyword">await</span> client<span class="token punctuation">.</span><span class="token function">connect</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">'Connected successfully to server'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> db <span class="token operator">=</span> client<span class="token punctuation">.</span><span class="token function">db</span><span class="token punctuation">(</span>dbName<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">return</span> <span class="token string">'done.'</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token function">then</span><span class="token punctuation">(</span>console<span class="token punctuation">.</span>log<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token function">catch</span><span class="token punctuation">(</span><span class="token parameter">e</span> <span class="token operator">=></span> <span class="token punctuation">{</span>
+    console<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token function">finally</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> client<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></code></pre>
+<p>After running it I found this at the end of the error message:</p>
+<pre><code>[cause]: MongoNetworkError: read ECONNRESET
+    at TLSSocket.&lt;anonymous&gt; (/Users/rizaldim/tmp/mongodb-srv/nodejs/node_modules/mongodb/lib/cmap/connect.js:285:44)
+    at Object.onceWrapper (node:events:633:26)
+    at TLSSocket.emit (node:events:518:28)
+    at emitErrorNT (node:internal/streams/destroy:170:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  [Symbol(errorLabels)]: Set(1) { 'ResetPool' },
+  [cause]: Error: read ECONNRESET
+      at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20) {
+    errno: -54,
+    code: 'ECONNRESET',
+    syscall: 'read'
+  }
+}
+</code></pre>
+<p>TLS? I must have missed something. I was sure that there was no mention of tls
+or anything related to that after reading about SRV record or SRV connection
+string. After re-reading
+<a href="https://www.mongodb.com/docs/manual/reference/connection-string/#srv-connection-format">the MongoDB docs</a>
+I found this:</p>
+<blockquote>
+<p>Use of the +srv connection string modifier automatically
+sets the tls (or the equivalent ssl) option to true for the connection.
+You can override this behavior by explicitly setting the tls
+(or the equivalent ssl) option to false with tls=false (or ssl=false) in the query string.</p>
+</blockquote>
+<p>So it turns out using SRV connection string implies that <code>tls=true</code> in the connection
+string. I haven't configured the TLS for my new replica set yet. That's why I
+can't connect to it. While the TLS is still not set up, I need to add <code>tls=false</code>
+to my connection string.</p>
+<p>A couple of hours getting stuck trying to find out why my setup didn't work.
+The key takeaway is always read the docs. Read it thoroughly.</p>
+
+<ul class="links-nextprev"><li class="links-nextprev-prev">← Previous<br> <a href="/blog/aks-with-waf/">Lessons learned making things work between AKS and Azure WAF</a></li>
+</ul>
+
+			</heading-anchors>
+		</main>
+
+		<footer>
+			<p><em>Built with <a href="https://www.11ty.dev/">Eleventy v3.0.0</a></em></p>
+		</footer>
+
+		<!-- This page `/blog/mongodb-srv-and-tls/` was built on 2025-03-07T14:48:35.041Z -->
+		<script type="module" src="/dist/rJ3_G-2ArF.js"></script>
+	</body>
+</html>

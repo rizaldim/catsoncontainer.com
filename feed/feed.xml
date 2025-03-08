@@ -1,0 +1,976 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet href="pretty-atom-feed.xsl" type="text/xsl"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+
+  <title>Cats on container</title>
+  <subtitle>Rizaldi Martaputra&#39;s personal website</subtitle>
+  <link href="https://catsoncontainer.com/feed/feed.xml" rel="self" />
+  <link href="https://catsoncontainer.com/" />
+  <updated>2025-03-07T00:00:00Z</updated>
+  <id>https://catsoncontainer.com/</id>
+  <author>
+    <name>Rizaldi Martaputra</name>
+  </author>
+
+  <entry>
+    <title>MongoDB SRV connection string and default tls parameter</title>
+    <link href="https://catsoncontainer.com/blog/mongodb-srv-and-tls/" />
+    <updated>2025-01-25T00:00:00Z</updated>
+    <id>https://catsoncontainer.com/blog/mongodb-srv-and-tls/</id>
+    <content type="html">&lt;h2 id=&quot;context&quot;&gt;Context&lt;/h2&gt;
+&lt;p&gt;If we use MongoDB Atlas, the connection string provided to be used to connect
+the cluster is using
+&lt;a href=&quot;https://www.mongodb.com/docs/manual/reference/connection-string/#srv-connection-format&quot;&gt;SRV connection format&lt;/a&gt;.
+So instead of using &lt;code&gt;mongodb://&lt;/code&gt; in the connection string, it will be &lt;code&gt;mongodb+srv://&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The advantage of using this is that if I have a MongoDB replica set with 3 nodes,
+using the standard connection format (the &lt;code&gt;mongodb://&lt;/code&gt; one) I will set the
+connection string like this:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;mongodb://username:password@db-1.example.com:27017,db-2.example.com:27017,db-3.example.com:27017/db?authSource=admin&amp;amp;replicaSet=myRepl
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I think I can leave out the port to make it shorter, I am not sure. But yeah
+it&#39;s a bit too long. It&#39;s possible to just mention 1 node instead of all three
+but it&#39;s not recommended. If I use the &lt;code&gt;db-1.example.com&lt;/code&gt; one and then that
+node is down then the db client will not be able to find the rest of the
+replica set and it will not be able to connect to it.&lt;/p&gt;
+&lt;p&gt;Using SRV connection format, I can use something like this:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;mongodb+srv://username:password@db-rs.example.com/db
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So how does it work really? Seems like there is less information in that connection string
+and somehow it works. The client can find out all of the nodes inside the replica set
+and the parameters used for the connection string.&lt;/p&gt;
+&lt;h2 id=&quot;srv-dns-record&quot;&gt;SRV DNS record&lt;/h2&gt;
+&lt;p&gt;Turns out there is a type of DNS record called SRV.
+&lt;a href=&quot;https://www.cloudflare.com/learning/dns/dns-records/dns-srv-record/&quot;&gt;This page in Cloudflare learning site&lt;/a&gt;
+explains it well. In summary this type of record is a DNS service record, hence
+the name SRV I assume. The format is the following:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;_service._proto.name. TTL class type of record priority weight port target.
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So let&#39;s say that I have a MongoDB replica set. It has 3 nodes. The nodes are
+accessible using these addresses: &lt;strong&gt;rs-node-1.rizaldi.net&lt;/strong&gt;, &lt;strong&gt;rs-node-2.rizaldi.net&lt;/strong&gt;, and
+&lt;strong&gt;rs-node-3.rizaldi.net&lt;/strong&gt;. I want this replica set to be accessible through
+&lt;strong&gt;db.rizaldi.net&lt;/strong&gt; domain. For this I will create 3 DNS records with type SRV for
+the host &lt;strong&gt;_mongodb._tcp.db.rizaldi.net&lt;/strong&gt;. The way to create these records will probably differ
+for each DNS manager that you use. In Porkbun it looks like the following.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/mongodb-srv-and-tls/NYCcNZLOIo-1676.avif 1676w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/mongodb-srv-and-tls/NYCcNZLOIo-1676.webp 1676w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/mongodb-srv-and-tls/NYCcNZLOIo-1676.png&quot; alt=&quot;Form to add SRV record in Porkbun&quot; width=&quot;1676&quot; height=&quot;1100&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;Using the above form for my use case, I will need to create 3 DNS records. For
+the first one I will fill in the form with:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Host&lt;/strong&gt;: _mongodb._tcp.db.rizaldi.net&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Answer/Value&lt;/strong&gt;: &lt;code&gt;0 27017 rs-node-1.rizaldi.net&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Priority&lt;/strong&gt;: 0&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The other two records will be the same except for the &lt;code&gt;rs-node-1&lt;/code&gt; part. It will
+be &lt;code&gt;rs-node-2&lt;/code&gt; and &lt;code&gt;rs-node-3&lt;/code&gt; respectively.&lt;/p&gt;
+&lt;p&gt;Why do I use 0 for priority and weight? To be honest I just copy the setup from
+MongoDB Atlas. When I queried the DNS record for my MongoDB Atlas cluster&#39;s DNS
+I found that it uses 0 as priority and weight. I haven&#39;t experimented with
+changing the values yet.&lt;/p&gt;
+&lt;h2 id=&quot;additional-txt-record&quot;&gt;Additional TXT record&lt;/h2&gt;
+&lt;p&gt;Another thing to note is that MongoDB client will also look for a TXT record
+for the domain used in the connection string. The value of this TXT record will
+be the parameter of the connection string. For my sample use case I need to add
+a TXT record for &lt;code&gt;db.rizaldi.net&lt;/code&gt; with value &lt;code&gt;authSource=admin&amp;amp;replicaSet=rs0&lt;/code&gt;.
+This is to tell the MongoDB client to use &lt;code&gt;admin&lt;/code&gt; database as the
+authentication database and the name of replica set is &lt;code&gt;rs0&lt;/code&gt;.&lt;/p&gt;
+&lt;h2 id=&quot;the-implied-tls-parameter&quot;&gt;The implied tls parameter&lt;/h2&gt;
+&lt;p&gt;When I did the experiment of setting up the DNS for MongoDB replica set, I
+still couldn&#39;t connect to the replica set even though I was sure that I already
+configured the DNS records in the correct way.&lt;/p&gt;
+&lt;p&gt;The funny thing is I could connect to the replica set using standard MongoDB
+connection string, by mentioning one or all the nodes of the replica set in the
+connection string.&lt;/p&gt;
+&lt;p&gt;To investigate it I run a python script that I found in
+&lt;a href=&quot;https://www.mongodb.com/developer/products/mongodb/srv-connection-strings/&quot;&gt;MongoDB developer site&lt;/a&gt;.&lt;/p&gt;
+&lt;pre class=&quot;language-python&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-python&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;import&lt;/span&gt; srvlookup &lt;span class=&quot;token comment&quot;&gt;#pip install srvlookup&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;import&lt;/span&gt; sys
+&lt;span class=&quot;token keyword&quot;&gt;import&lt;/span&gt; dns&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;resolver &lt;span class=&quot;token comment&quot;&gt;#pip install dnspython&lt;/span&gt;
+
+host &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token boolean&quot;&gt;None&lt;/span&gt;
+
+&lt;span class=&quot;token keyword&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;token builtin&quot;&gt;len&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;sys&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;argv&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;1&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+   host &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; sys&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;argv&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;
+
+&lt;span class=&quot;token keyword&quot;&gt;if&lt;/span&gt; host &lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+   services &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; srvlookup&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;lookup&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;mongodb&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; domain&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;host&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+   &lt;span class=&quot;token keyword&quot;&gt;for&lt;/span&gt; i &lt;span class=&quot;token keyword&quot;&gt;in&lt;/span&gt; services&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;token keyword&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;%s:%i&quot;&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;i&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;hostname&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; i&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;port&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+   &lt;span class=&quot;token keyword&quot;&gt;for&lt;/span&gt; txtrecord &lt;span class=&quot;token keyword&quot;&gt;in&lt;/span&gt; dns&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;resolver&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;query&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;host&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&#39;TXT&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;token keyword&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;%s: %s&quot;&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;%&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt; host&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; txtrecord&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;token keyword&quot;&gt;else&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token keyword&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;No host specified&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I ran the script first using my MongoDB Atlas cluster domain as host. Then using
+my newly setup MongoDB replica set as host. Then I compared the result. From my
+understanding my setup should work since the output of the script is as expected.&lt;/p&gt;
+&lt;p&gt;Then I got an idea to run a simple javascript program for connecting the replica
+set. The script is from the MongoDB official node client&#39;s README file with
+some modifications.&lt;/p&gt;
+&lt;pre class=&quot;language-javascript&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-javascript&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt; MongoClient &lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;require&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;mongodb&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;// Connection URL&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; url &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&#39;mongodb+srv://user:pass@db.rizaldi.net&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; client &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;token class-name&quot;&gt;MongoClient&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;url&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+client&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;on&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;commandStarted&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token parameter&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&gt;&lt;/span&gt; console&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;debug&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;event&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+client&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;on&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;commandSucceeded&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token parameter&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&gt;&lt;/span&gt; console&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;debug&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;event&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+client&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;on&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;commandFailed&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token parameter&quot;&gt;event&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&gt;&lt;/span&gt; console&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;debug&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;event&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token keyword&quot;&gt;async&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;token comment&quot;&gt;// Use connect method to connect to the server&lt;/span&gt;
+  &lt;span class=&quot;token keyword&quot;&gt;await&lt;/span&gt; client&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;connect&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+  console&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;log&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;Connected successfully to server&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; db &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; client&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;db&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;dbName&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+  &lt;span class=&quot;token keyword&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&#39;done.&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;token function&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;then&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;console&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;log&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;catch&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token parameter&quot;&gt;e&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&gt;&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+    console&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;error&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;e&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;finally&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&gt;&lt;/span&gt; client&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;close&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;After running it I found this at the end of the error message:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;[cause]: MongoNetworkError: read ECONNRESET
+    at TLSSocket.&amp;lt;anonymous&amp;gt; (/Users/rizaldim/tmp/mongodb-srv/nodejs/node_modules/mongodb/lib/cmap/connect.js:285:44)
+    at Object.onceWrapper (node:events:633:26)
+    at TLSSocket.emit (node:events:518:28)
+    at emitErrorNT (node:internal/streams/destroy:170:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  [Symbol(errorLabels)]: Set(1) { &#39;ResetPool&#39; },
+  [cause]: Error: read ECONNRESET
+      at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20) {
+    errno: -54,
+    code: &#39;ECONNRESET&#39;,
+    syscall: &#39;read&#39;
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;TLS? I must have missed something. I was sure that there was no mention of tls
+or anything related to that after reading about SRV record or SRV connection
+string. After re-reading
+&lt;a href=&quot;https://www.mongodb.com/docs/manual/reference/connection-string/#srv-connection-format&quot;&gt;the MongoDB docs&lt;/a&gt;
+I found this:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Use of the +srv connection string modifier automatically
+sets the tls (or the equivalent ssl) option to true for the connection.
+You can override this behavior by explicitly setting the tls
+(or the equivalent ssl) option to false with tls=false (or ssl=false) in the query string.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;So it turns out using SRV connection string implies that &lt;code&gt;tls=true&lt;/code&gt; in the connection
+string. I haven&#39;t configured the TLS for my new replica set yet. That&#39;s why I
+can&#39;t connect to it. While the TLS is still not set up, I need to add &lt;code&gt;tls=false&lt;/code&gt;
+to my connection string.&lt;/p&gt;
+&lt;p&gt;A couple of hours getting stuck trying to find out why my setup didn&#39;t work.
+The key takeaway is always read the docs. Read it thoroughly.&lt;/p&gt;
+    </content>
+  </entry>
+
+  <entry>
+    <title>Lessons learned making things work between AKS and Azure WAF</title>
+    <link href="https://catsoncontainer.com/blog/aks-with-waf/" />
+    <updated>2025-01-05T00:00:00Z</updated>
+    <id>https://catsoncontainer.com/blog/aks-with-waf/</id>
+    <content type="html">&lt;p&gt;The last few months because of work I do some experiments on using Azure Kubernetes
+Service (AKS) and securing the services hosted on it using Azure WAF. In short,
+I need to host services in AKS but I also need to utilize Azure WAF as a security
+layer for those services. This post is about the things I learned while I do
+the experiment.&lt;/p&gt;
+&lt;h2 id=&quot;context&quot;&gt;Context&lt;/h2&gt;
+&lt;p&gt;From &lt;a href=&quot;https://learn.microsoft.com/en-us/azure/web-application-firewall/overview&quot;&gt;Azure WAF docs&lt;/a&gt;:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Web Application Firewall (WAF) provides centralized protection of your web applications
+from common exploits and vulnerabilities. Web applications are increasingly targeted
+by malicious attacks that exploit commonly known vulnerabilities. SQL injection and
+cross-site scripting are among the most common attacks.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Azure WAF is more or less the same with &lt;a href=&quot;https://aws.amazon.com/waf/&quot;&gt;AWS WAF&lt;/a&gt;
+or other WAF products out there.&lt;/p&gt;
+&lt;p&gt;From the same docs page, I found out that Azure WAF can be deployed with
+Azure Application Gateway, Azure Front Door, and Azure Content Delivery Network
+from Microsoft. Azure Front Door itself is a type of CDN. So I focus on the first
+option, Azure Application Gateway.&lt;/p&gt;
+&lt;h2 id=&quot;the-problem-with-application-gateway-ingress-controller-agic&quot;&gt;The problem with Application Gateway Ingress Controller (AGIC)&lt;/h2&gt;
+&lt;p&gt;Azure provides &lt;a href=&quot;https://learn.microsoft.com/en-us/azure/application-gateway/ingress-controller-overview&quot;&gt;Ingress controller&lt;/a&gt;
+for services running inside a kubernetes cluster and use Azure Application Gateway
+as gateway into the cluster.&lt;/p&gt;
+&lt;p&gt;The way it works is the cluster admin creates an Ingress object with
+&lt;code&gt;azure-application-gateway&lt;/code&gt; as &lt;code&gt;.spec.ingressClassName&lt;/code&gt;. The AGIC controller
+installed inside the cluster will detect this and from the Ingress specification
+it will list the services accessible through that Ingress. Then the controller
+will sync the App Gateway&#39;s rules, listeners, and backends to match the Ingress
+specification.&lt;/p&gt;
+&lt;p&gt;At first this seemed to work just as I expected it. The problems arise when
+there is a new deployment. So the Application Gateway backends will record
+the IP addresses of the pods related to a service. When there is a new deployment,
+those IP addresses will change since the pods from the old deployment will be
+replaced by the new ones. From my observation the changes is not applied as
+seamless as it should be.&lt;/p&gt;
+&lt;p&gt;What I did is I curl into my service&#39;s health check, give it a 1-second
+duration to wait and I loop it. I create a new deployment and I apply it.
+In my experiment there was a 15-second period where the curl return 502.
+While doing the curl, I also monitor the Endpoint object of the Service object.
+The changes were applied almost instantly. I suspect the problem arouse because
+when the AGIC sync the changes with the Application Gateway&#39;s backend pools
+the changes were not applied instantly.&lt;/p&gt;
+&lt;h2 id=&quot;azure-front-door-and-the-private-link&quot;&gt;Azure Front Door and The Private Link&lt;/h2&gt;
+&lt;p&gt;Since I stuck with App Gateway, I decided to experiment with Azure Front Door.
+After reading the documentation, I understand that the way to use Azure Front
+Door with AKS is to use my cluster load balancer as one of the origins of an
+Azure Front Door instance.&lt;/p&gt;
+&lt;p&gt;If you google &lt;strong&gt;AKS Azure Front Door&lt;/strong&gt;, the first link is
+&lt;a href=&quot;https://learn.microsoft.com/en-us/azure/architecture/example-scenario/aks-front-door/aks-front-door&quot;&gt;this documentation&lt;/a&gt;
+in Azure Architecture Center. It&#39;s quite complicated. After reading it a couple
+of times, and only understanding just a fraction of it, I found that there is
+something called a Private Link service in Azure.&lt;/p&gt;
+&lt;p&gt;From &lt;a href=&quot;https://learn.microsoft.com/en-us/azure/private-link/private-link-overview&quot;&gt;Azure docs&lt;/a&gt;:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Azure Private Link enables you to access Azure PaaS Services
+(for example, Azure Storage and SQL Database) and
+Azure hosted customer-owned/partner services over a private endpoint in your virtual network.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Maybe I can use Private Link to get access to my cluster&#39;s load balancer and
+then I can make my load balancer only accessible from the Private Link? That
+would make it more secure right? Then I found out that Azure Front Door
+private link is &lt;a href=&quot;https://learn.microsoft.com/en-us/azure/frontdoor/private-link#region-availability&quot;&gt;not yet available in South East Asia region&lt;/a&gt;.&lt;/p&gt;
+&lt;h2 id=&quot;app-gateway-and-nodeport-type-service-object&quot;&gt;App Gateway and NodePort-type Service object&lt;/h2&gt;
+&lt;p&gt;So I plan to use &lt;a href=&quot;https://projectcontour.io/&quot;&gt;Contour&lt;/a&gt; as my cluster Ingress
+controller. By default Contour run as service of type &lt;strong&gt;LoadBalancer&lt;/strong&gt;. But
+it turns out I can opt to run it as type &lt;strong&gt;NodePort&lt;/strong&gt;. By doing this I assumed
+that I can create a backend pool in my Appliation Gateway as Virtual Machine
+Scale Set type. It means that I can define a backend as the cluster nodes and
+the port based on the definition of the service used by Contour.&lt;/p&gt;
+&lt;p&gt;When I tried to do it this way it worked for a while. But the thing is there is
+a time, I think it&#39;s usually once in a week or 2 weeks, where AKS just decides
+to replace my nodes with new nodes. Completely replace all the nodes. Usually
+it happens in the morning. With this setup when this happened, the backend pool
+somehow forgets where it points to. I checked the name of the old vm scale set
+and the new one. It had the same name. Granted the nodes inside the scale set were
+different but the name was the same.&lt;/p&gt;
+&lt;p&gt;The way that I can think of to work around this is to somehow detect when
+nodes replacement happens and when it does then make sure the backend in the
+Application Gateway points to the VM scale set. But there must be a better way, I thought to
+myself.&lt;/p&gt;
+&lt;h2 id=&quot;ip-address-filtering-and-front-door-identifier&quot;&gt;IP Address Filtering and Front Door identifier&lt;/h2&gt;
+&lt;p&gt;It turns out there is
+&lt;a href=&quot;https://learn.microsoft.com/en-us/azure/frontdoor/origin-security?tabs=aks-nginx&amp;amp;pivots=front-door-standard-premium&quot;&gt;a whole page&lt;/a&gt;
+dedicated on how to secure traffic toAzure Front Door origins. For AKS load
+balancer there are 2 options: use &lt;code&gt;X-Azure-FDID&lt;/code&gt; request header to filter request
+and/or use IP address filtering.&lt;/p&gt;
+&lt;p&gt;The latter is easier to implement with Contour. Using Contour&#39;s
+&lt;a href=&quot;https://projectcontour.io/docs/1.30/config/fundamentals/#httpproxy-fundamentals&quot;&gt;HTTPProxy&lt;/a&gt;
+I can use a &lt;a href=&quot;https://projectcontour.io/docs/1.30/config/api/#projectcontour.io/v1.HeaderMatchCondition&quot;&gt;HeaderMatchCondition&lt;/a&gt;
+to check whether an incoming request has the expected value for &lt;code&gt;X-Azure-FDID&lt;/code&gt;
+header. If it doesn&#39;t the Ingress controller will immediately return 403. If it
+does, the request is passed into the expected service.&lt;/p&gt;
+&lt;p&gt;The second option is a bit more challenging. The IP addresses of the Azure Front
+Door edge nodes can change over time. Azure provide
+&lt;a href=&quot;https://www.microsoft.com/en-us/download/details.aspx?id=56519&quot;&gt;a download link&lt;/a&gt;
+to get the whole Azure Ip ranges and service tags. Using the data in this file
+I can regularly update the IP filtering in the Contour&#39;s HTTP Proxies or Ingresses
+to filter out unwanted requests.&lt;/p&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;To use Azure WAF to secure my AKS cluster I need to set up my cluster either by
+using Azure App Gateway or Azure Front Door. Using App Gateway Ingress Controller
+provided by Azure I found that the service can be down for up to 30 seconds
+when there is a new deployment
+because the changes in the App Gateway&#39;s backend pools is not instantaneous. Using
+Contour as &lt;strong&gt;NodePort&lt;/strong&gt; service is also not possible at this point. Using
+Front Door, I can utilize filtering based on Front Door identifier in request
+header and IP addresses to filter out unwanted request coming into my cluster.&lt;/p&gt;
+    </content>
+  </entry>
+
+  <entry>
+    <title>Back to eleventy-base-blog starter project</title>
+    <link href="https://catsoncontainer.com/blog/back-to-11ty-base-blog/" />
+    <updated>2024-11-24T00:00:00Z</updated>
+    <id>https://catsoncontainer.com/blog/back-to-11ty-base-blog/</id>
+    <content type="html">&lt;p&gt;One thing that becomes an obstacle everytime I want to write something here is
+the fact that I forgot this blog&#39;s setup everytime. I tried to write my own css
+because I think &amp;quot;I&#39;m maintaining my own blog, writing it using 11ty. I should
+also write my own css&amp;quot;. It&#39;s not that I don&#39;t like writing css, it&#39;s just
+that right now I should prioritize writing first. It becomes a mental block.&lt;/p&gt;
+&lt;p&gt;The fact is I like learning new things. I like learning CSS. It has come a long
+way compared to the first time I learned it for the first time 15-ish years
+ago. I follow many web developers in &lt;em&gt;insert your prefered social media here&lt;/em&gt;.
+I get excited every time there is a post in my timeline when a new CSS feature
+comes out. &amp;quot;Hey, that&#39;s awesome. I should learn that and implement it for my
+own blog&amp;quot;. Yeah, great idea. The thing is I suck at design. I don&#39;t have the
+skill to manage my css files so that anytime I come back to my own setup I don&#39;t
+forget about it.&lt;/p&gt;
+&lt;p&gt;So here I am, back using &lt;a href=&quot;https://github.com/11ty/eleventy-base-blog&quot;&gt;11ty-base-blog&lt;/a&gt;
+starter project. I think it&#39;s the 5th or 6th time I flip flop between using it
+and writing my own css. I will stick with this for now. Or maybe for the foreseeable
+future. Focus on writing first. Don&#39;t make major changes to the css. If there&#39;s
+any changes from the original repo, use it. Stick with it.&lt;/p&gt;
+&lt;p&gt;Focus on writing. Be consistent on writing. Anything else is secondary.&lt;/p&gt;
+    </content>
+  </entry>
+
+  <entry>
+    <title>Process exporter in Prometheus</title>
+    <link href="https://catsoncontainer.com/blog/prometheus-4/" />
+    <updated>2024-07-21T00:00:00Z</updated>
+    <id>https://catsoncontainer.com/blog/prometheus-4/</id>
+    <content type="html">&lt;p&gt;I wrote the &lt;a href=&quot;https://catsoncontainer.com/posts/prometheus-3/&quot;&gt;previous post&lt;/a&gt; about monitoring
+my machine using Prometheus thinking that I can monitor it the way I can
+using task manager in Windows or activity monitor in MacOS. With the help
+of &lt;a href=&quot;https://github.com/prometheus/node_exporter&quot;&gt;node exporter&lt;/a&gt; I can monitor
+the cpu usage, memory usage, or network, but I can&#39;t see what processes use
+the most cpu or memory. Turns out I need another exporter if I want that
+information, &lt;a href=&quot;https://github.com/ncabatoff/process-exporter&quot;&gt;the process exporter&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;This exporter itself is not part of official prometheus exporters. The good
+thing is it&#39;s listed in &lt;a href=&quot;https://prometheus.io/docs/instrumenting/exporters/&quot;&gt;Exporters and integrations page&lt;/a&gt; on Prometheus
+documentation. It&#39;s mentioned in that page that this exporter is one of
+3rd party exporters and Prometheus doesn&#39;t vet this kind of exporters for best
+practices. Still the fact that this exporter is listed in the official
+Prometheus documentations means that this option is probably my best option
+right now.&lt;/p&gt;
+&lt;p&gt;The bad news is the process exporter can only run on Linux machines. I tried
+cloning the repo and building it locally but the binary failed to run because
+it turns out the exporter relies on getting the information from &lt;code&gt;/proc&lt;/code&gt;.&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;% ./process-exporter
+&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;/07/21 &lt;span class=&quot;token number&quot;&gt;15&lt;/span&gt;:13:58 Reading metrics from /proc &lt;span class=&quot;token keyword&quot;&gt;for&lt;/span&gt; procnames: &lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;/07/21 &lt;span class=&quot;token number&quot;&gt;15&lt;/span&gt;:13:58 Error initializing: could not &lt;span class=&quot;token builtin class-name&quot;&gt;read&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;/proc&quot;&lt;/span&gt;&lt;span class=&quot;token builtin class-name&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;stat&lt;/span&gt; /proc: no such &lt;span class=&quot;token function&quot;&gt;file&lt;/span&gt; or directory&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Nothing I can do about that. So I decided to run the exporter on my Hetzner
+Linux node. So I ssh into the node, download the release for linux amd64, and
+extract the tar file. I &lt;code&gt;cd&lt;/code&gt; into the directory extracted and then create
+a new file, &lt;code&gt;config.yaml&lt;/code&gt;, and paste the simplest config, as mentioned in
+&lt;a href=&quot;https://github.com/ncabatoff/process-exporter/blob/v0.8.2/README.md&quot;&gt;the project&#39;s GitHub readme file&lt;/a&gt;.&lt;/p&gt;
+&lt;pre class=&quot;language-yaml&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;&lt;span class=&quot;token key atrule&quot;&gt;process_names&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;{{ .Comm }}&quot;&lt;/span&gt;
+    &lt;span class=&quot;token key atrule&quot;&gt;cmdline&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&#39;.+&#39;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Next, I run the exporter with the following command.&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ ./process-exporter &lt;span class=&quot;token parameter variable&quot;&gt;--config.path&lt;/span&gt; config.yaml&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, the exporter is running and I can open the metrics page from port 9256.
+Scrolling down the page I found the metrics for cpu usage for each processes.&lt;/p&gt;
+&lt;pre class=&quot;language-promql&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-promql&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# HELP namedprocess_namegroup_cpu_seconds_total Cpu user usage in seconds&lt;/span&gt;
+&lt;span class=&quot;token comment&quot;&gt;# TYPE namedprocess_namegroup_cpu_seconds_total counter&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;(sd-pam)&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;system&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;(sd-pam)&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;user&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;agetty&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;system&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;agetty&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;user&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;atd&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;system&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;atd&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;user&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;bash&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;system&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;bash&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;user&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;containerd&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;system&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0.35999999999989996&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;containerd&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;user&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0.43000000000006366&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;cron&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;system&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;cron&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;user&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;dbus-daemon&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;system&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;dbus-daemon&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;user&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;dockerd&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;system&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0.00999999999999801&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;dockerd&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;user&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0.060000000000002274&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;multipathd&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;system&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0.04999999999999716&lt;/span&gt;
+namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;multipathd&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;mode&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;user&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0.03999999999999204&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In [the process exporter&#39;s readme], the following information is mentioned.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;cpu_seconds_total counter&lt;/p&gt;
+&lt;p&gt;CPU usage based on /proc/[pid]/stat fields utime(14) and stime(15) i.e. user
+and system time. This is similar to the node_exporter&#39;s node_cpu_seconds_total.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;That last part. It means I can use this metric to the track the cpu usage of
+each process.&lt;/p&gt;
+&lt;p&gt;For memory usage, the same readme file lists &lt;code&gt;memory_bytes&lt;/code&gt; metrics. This metrics
+has &lt;code&gt;memtype&lt;/code&gt; labels, which can be 1 of 3 values: &lt;code&gt;resident&lt;/code&gt;, &lt;code&gt;virtual&lt;/code&gt;, and
+&lt;code&gt;swapped&lt;/code&gt;. I think what I need for the actual RAM used by a process is the
+one with &lt;code&gt;resident&lt;/code&gt; as &lt;code&gt;memtype&lt;/code&gt;, but I am not quite sure. But let&#39;s use it
+for now.&lt;/p&gt;
+&lt;p&gt;Next, I want to graph the cpu and memory usage of my server. I have prometheus
+running in my local machine, so I just need to add my Hetzner server as the
+prometheus target. I add another item under &lt;code&gt;scraper_configs&lt;/code&gt; inside my
+&lt;code&gt;prometheus.yml&lt;/code&gt; file.&lt;/p&gt;
+&lt;pre class=&quot;language-yaml&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;&lt;span class=&quot;token key atrule&quot;&gt;scrape_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;job_name&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;prome&quot;&lt;/span&gt;
+    &lt;span class=&quot;token key atrule&quot;&gt;static_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;targets&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;localhost:9090&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;job_name&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;node_exporter&quot;&lt;/span&gt;
+    &lt;span class=&quot;token key atrule&quot;&gt;static_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;targets&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;localhost:9100&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;job_name&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;process_exporter&quot;&lt;/span&gt;
+    &lt;span class=&quot;token key atrule&quot;&gt;static_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;targets&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;&amp;lt;my-linux-server-ip&gt;:9256&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I re-run the prometheus binary, then I can see now that my linux server has
+been added as one of the targets.&lt;/p&gt;
+&lt;p&gt;Now to test whether the process exporter can really help me to track the cpu
+usage of a process inside my server, I create a simple nodejs app that access
+http request on port 3000, and everytime someone requested it, it will wait
+for 5 seconds and then return &lt;strong&gt;Hello, world&lt;/strong&gt;.&lt;/p&gt;
+&lt;pre class=&quot;language-js&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-js&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; express &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;require&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;express&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; app &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;express&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;execSync&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;require&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;child_process&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; port &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;3000&lt;/span&gt;
+
+app&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;/&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token parameter&quot;&gt;req&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; res&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&gt;&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;token function&quot;&gt;execSync&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;sleep 5&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+  res&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;send&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;Hello World!&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+
+app&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;listen&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;port&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;0.0.0.0&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&gt;&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+  console&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;log&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token template-string&quot;&gt;&lt;span class=&quot;token template-punctuation string&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;Example app listening on port &lt;/span&gt;&lt;span class=&quot;token interpolation&quot;&gt;&lt;span class=&quot;token interpolation-punctuation punctuation&quot;&gt;${&lt;/span&gt;port&lt;span class=&quot;token interpolation-punctuation punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token template-punctuation string&quot;&gt;`&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is the query that I use to get the cpu times used by the node process.&lt;/p&gt;
+&lt;pre class=&quot;language-promql&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-promql&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;node&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is the graph that I get.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-4/83FpRHfsx8-2820.avif 2820w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-4/83FpRHfsx8-2820.webp 2820w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-4/83FpRHfsx8-2820.png&quot; alt=&quot;Cpu time used by the node app&quot; width=&quot;2820&quot; height=&quot;1216&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;The cpu time used increases every time I make a request to my app since it
+execute sleep and the command is executed in synchronous mode.&lt;/p&gt;
+&lt;p&gt;I use the following query to get a better number represent the cpu usage of
+the node app.&lt;/p&gt;
+&lt;pre class=&quot;language-promql&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-promql&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;rate&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;node&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token context-range&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token range-duration number&quot;&gt;30s&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;by&lt;/span&gt; &lt;span class=&quot;token vector-match&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Let&#39;s break it down. The most inner part of the above query is this.&lt;/p&gt;
+&lt;pre class=&quot;language-promql&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-promql&quot;&gt;namedprocess_namegroup_cpu_seconds_total&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is the metrics to get the cpu seconds used by all the processes running. To
+narrow it down to the node app process, I use the &lt;code&gt;groupname&lt;/code&gt; label with &lt;code&gt;node&lt;/code&gt;
+value.&lt;/p&gt;
+&lt;pre class=&quot;language-promql&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-promql&quot;&gt;namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;node&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now, I have two lines in my graph. The series section below the graph show
+the important information.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-4/cHRNWne4U2-1802.avif 1802w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-4/cHRNWne4U2-1802.webp 1802w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-4/cHRNWne4U2-1802.png&quot; alt=&quot;Series below the graph&quot; width=&quot;1802&quot; height=&quot;176&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;Those two series are almost identical except for the &lt;code&gt;mode&lt;/code&gt; label value. So
+basically the &lt;code&gt;user&lt;/code&gt; mode is the time used by CPU to execute code in user space
+and the &lt;code&gt;system&lt;/code&gt; mode is the time used in kernel space.&lt;/p&gt;
+&lt;p&gt;Next, I expand the query to be:&lt;/p&gt;
+&lt;pre class=&quot;language-promql&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-promql&quot;&gt;&lt;span class=&quot;token function&quot;&gt;rate&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;node&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token context-range&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token range-duration number&quot;&gt;30s&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So the &lt;code&gt;rate&lt;/code&gt; function is essentially telling prometheus to calculate how much
+a counter metrics, like &lt;code&gt;namedprocess_namegroup_cpu_seconds_total&lt;/code&gt;, changes
+over the interval, which in this case is 30 seconds (the number in the bracket).
+Basically what prometheus does is get the value of the metrics at the start
+of the duration of the interval, let&#39;s call it value A, and then get the value
+30 seconds after that, let&#39;s call it value B, and then substract A from B and
+divide it by 30.&lt;/p&gt;
+&lt;p&gt;Let&#39;s put it this way. If a process in our server, let&#39;s call it process X,
+has used 1000 seconds of cpu time at the start of the duration, and after 30
+seconds it uses 1020 seconds of cpu time, it means process X uses 20 seconds
+out of 30 seconds cpu time available in that 30-second duration. With that
+we can conclude that it uses 2/3 of cpu times, or 66.67% cpu time, in that
+duration. If the process X uses let&#39;s say 30 seconds of 30 seconds available,
+it means it uses 100% of cpu time available. We can also say that it uses
+the whole cpu for itself in that duration.&lt;/p&gt;
+&lt;p&gt;From the latest query, I still have two series. One for user mode and one for
+system mode. To combine them, I use &lt;code&gt;sum&lt;/code&gt; function.&lt;/p&gt;
+&lt;pre class=&quot;language-promql&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-promql&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;sum&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;rate&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;namedprocess_namegroup_cpu_seconds_total&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;node&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token context-range&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token range-duration number&quot;&gt;30s&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;by&lt;/span&gt; &lt;span class=&quot;token vector-match&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;groupname&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;As the final experiment, I will use &lt;a href=&quot;https://github.com/rakyll/hey&quot;&gt;hey&lt;/a&gt;,
+a command line tools to load test http servers. I want to use how it effects
+the cpu usage of my simple node app.&lt;/p&gt;
+&lt;p&gt;I run the following command to load test my node app for 1 minute.&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ hey &lt;span class=&quot;token parameter variable&quot;&gt;-z&lt;/span&gt; 1m http://&lt;span class=&quot;token operator&quot;&gt;&amp;lt;&lt;/span&gt;my-node-ip&lt;span class=&quot;token operator&quot;&gt;&gt;&lt;/span&gt;:3000&lt;/code&gt;&lt;/pre&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-4/wFwlwYNUfh-2780.avif 2780w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-4/wFwlwYNUfh-2780.webp 2780w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-4/wFwlwYNUfh-2780.png&quot; alt=&quot;Load test graph&quot; width=&quot;2780&quot; height=&quot;1232&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;Sure enough, the cpu usage for the node app increases while the load test is
+in progress. But it&#39;s still quite small. Probably because the app itself
+only calls &lt;code&gt;sleep&lt;/code&gt; while responding to the request but doing nothing else.
+One thing that I don&#39;t understand though after &lt;code&gt;hey&lt;/code&gt; finished sending request,
+the cpu usage itself not instantly decreased to zero. It took more than 3
+minutes to go down. I don&#39;t know why. Maybe that&#39;s just how node works. Or maybe
+not. Or maybe my prometheus query is wrong? I don&#39;t know.&lt;/p&gt;
+&lt;p&gt;Next time, just out of curiosity, I might try with simple golang app or python.
+Just for the sake of trying it out.&lt;/p&gt;
+    </content>
+  </entry>
+
+  <entry>
+    <title>Replacing brew with nix</title>
+    <link href="https://catsoncontainer.com/blog/nix-brew/" />
+    <updated>2024-07-15T00:00:00Z</updated>
+    <id>https://catsoncontainer.com/blog/nix-brew/</id>
+    <content type="html">&lt;p&gt;I&#39;ve been meaning to try &lt;a href=&quot;https://nixos.org/&quot;&gt;nix&lt;/a&gt; for a while now. I forgot when is the exact
+time that I read about it for the first time but after reading a bit about it I
+have this idea of using nix to replace Ansible for managing servers. In the
+sense that configuring the server in a deterministic way.&lt;/p&gt;
+&lt;p&gt;So last weekend I tried it out. A couple reading materials that I use as the
+guidance:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://nix.dev/tutorials/first-steps/&quot;&gt;The tutorial from nix.dev&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://zero-to-nix.com/&quot;&gt;Zero to nix&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://jvns.ca/categories/nix/&quot;&gt;Julia Evans&#39; posts about nix&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Julia Evans&#39; posts really help a lot. She wrote it in the perspective of a new
+user. I can understand a few early pages in the tutorial on nix.dev and zero-to-nix
+but after that I kind of get lost. Like it got complicated fast.&lt;/p&gt;
+&lt;p&gt;So I decided to take it easy. For now I am just using it to replace homebrew
+as my machine&#39;s package manager. Two concerns that I have with installing packages
+using nix:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Is it safe?&lt;/li&gt;
+&lt;li&gt;Does nix have all the packages that I need now and later on in the future?&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;For the first question I think, from the perspective of someone like me who
+more often than not just blindly run &lt;code&gt;brew install a-package&lt;/code&gt; up until now, it&#39;s
+as safe as using brew. One thing that&#39;s neat with the nix package in nixos.org
+is that there is a link to the source.&lt;/p&gt;
+&lt;p&gt;For example, the neovim package. At the time that I write this the source is
+defined by &lt;a href=&quot;https://github.com/NixOS/nixpkgs/blob/nixos-24.05/pkgs/by-name/ne/neovim-unwrapped/package.nix#L189&quot;&gt;the package.nix file in nixpkgs repository in GitHub&lt;/a&gt;. Granted that
+currently I don&#39;t fully understand the file right now, but the more I learn nix
+the more I can make sense of what makes a package as defined in the package.nix
+file.&lt;/p&gt;
+&lt;p&gt;For the second question, so far I think nix have all the packages that I need.&lt;/p&gt;
+&lt;p&gt;So for now, anytime I want to install a package I just run &lt;code&gt;nix profile install&lt;/code&gt;.&lt;/p&gt;
+    </content>
+  </entry>
+
+  <entry>
+    <title>Monitor your own PC/laptop with Prometheus</title>
+    <link href="https://catsoncontainer.com/blog/prometheus-3/" />
+    <updated>2024-07-02T00:00:00Z</updated>
+    <id>https://catsoncontainer.com/blog/prometheus-3/</id>
+    <content type="html">&lt;p&gt;Prometheus provides an exporter to help us monitor our machine or server. We
+can use that to monitor our own PC/laptop. The exporter is called node
+exporter. You can find the link to download the binary on
+&lt;a href=&quot;https://github.com/prometheus/node_exporter/releases&quot;&gt;the node exporter releases page&lt;/a&gt;. Select the latest relese and then download
+the tar gz file
+that suit your machine operating system and architecture. At the time of this
+writing, the latest version is 1.8.1. If you are using windows, you can use
+&lt;a href=&quot;https://github.com/prometheus-community/windows_exporter&quot;&gt;windows exporter&lt;/a&gt; instead of node exporter.&lt;/p&gt;
+&lt;p&gt;Once downloaded, extract the file.&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ &lt;span class=&quot;token function&quot;&gt;tar&lt;/span&gt; xzvf node_exporter-1.8.1.darwin-arm64.tar.gz&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Change into the extracted directory and run the binary file.&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ &lt;span class=&quot;token builtin class-name&quot;&gt;cd&lt;/span&gt; node_exporter-1.8.1.darwin-arm64
+$ ./node_exporter&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Read the last line of the output messages. It shows the address that you can then
+open in your browser.&lt;/p&gt;
+&lt;pre class=&quot;language-shell&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-shell&quot;&gt;&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.523Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:193 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;Starting node_exporter&quot;&lt;/span&gt; &lt;span class=&quot;token assign-left variable&quot;&gt;version&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;(version=1.8.1, branch=HEAD, revision=400c3979931613db930ea035f39ce7b377cdbb5b)&quot;&lt;/span&gt;
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.525Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:194 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;Build context&quot;&lt;/span&gt; &lt;span class=&quot;token assign-left variable&quot;&gt;build_context&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;(go=go1.22.3, platform=darwin/arm64, user=root@0ed3c8b67453, date=20240521-18:39:09, tags=unknown)&quot;&lt;/span&gt;
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.526Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;filesystem_common.go:111 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;filesystem &lt;span class=&quot;token assign-left variable&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;Parsed flag --collector.filesystem.mount-points-exclude&quot;&lt;/span&gt; &lt;span class=&quot;token assign-left variable&quot;&gt;flag&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;^/&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;dev&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;$&lt;span class=&quot;token operator&quot;&gt;|&lt;/span&gt;/&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;filesystem_common.go:113 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;filesystem &lt;span class=&quot;token assign-left variable&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;Parsed flag --collector.filesystem.fs-types-exclude&quot;&lt;/span&gt; &lt;span class=&quot;token assign-left variable&quot;&gt;flag&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;^devfs$
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:111 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;Enabled collectors&quot;&lt;/span&gt;
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;boottime
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;cpu
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;diskstats
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;filesystem
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;loadavg
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;meminfo
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;netdev
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;os
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;powersupplyclass
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;textfile
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;thermal
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;time
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.527Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;node_exporter.go:118 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;collector&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;uname
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.528Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;tls_config.go:313 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;Listening on&quot;&lt;/span&gt; &lt;span class=&quot;token assign-left variable&quot;&gt;address&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;::&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;:9100
+&lt;span class=&quot;token assign-left variable&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;2024&lt;/span&gt;-07-02T14:06:34.528Z &lt;span class=&quot;token assign-left variable&quot;&gt;caller&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;tls_config.go:316 &lt;span class=&quot;token assign-left variable&quot;&gt;level&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;info &lt;span class=&quot;token assign-left variable&quot;&gt;msg&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;TLS is disabled.&quot;&lt;/span&gt; &lt;span class=&quot;token assign-left variable&quot;&gt;http2&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;false &lt;span class=&quot;token assign-left variable&quot;&gt;address&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;::&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;:9100&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In my output it shows &lt;code&gt;address=[::]:9100&lt;/code&gt;. It means that I can get the metrics
+from node exporter at &lt;strong&gt;localhost:9100&lt;/strong&gt;. When I open the address, it opens a
+webpage.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-3/_aq-Wa9U0L-1878.avif 1878w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-3/_aq-Wa9U0L-1878.webp 1878w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-3/_aq-Wa9U0L-1878.png&quot; alt=&quot;Node exporter home page&quot; width=&quot;1878&quot; height=&quot;772&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;Click the &lt;strong&gt;Metrics&lt;/strong&gt; link. It will shows the metrics exposed by node exporter.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-3/sCZFu7fI8o-1782.avif 1782w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-3/sCZFu7fI8o-1782.webp 1782w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-3/sCZFu7fI8o-1782.png&quot; alt=&quot;Node exporter metrics&quot; width=&quot;1782&quot; height=&quot;1072&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;Now it&#39;s time to scrape those metrics using prometheus. Change into the prometheus
+directory, created in &lt;a href=&quot;https://catsoncontainer.com/posts/prometheus-1/&quot;&gt;the first post about prometheus&lt;/a&gt;. At the end of the
+config yaml file, add these lines:&lt;/p&gt;
+&lt;pre class=&quot;language-yaml&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;  &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;job_name&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;node_exporter&quot;&lt;/span&gt;
+    &lt;span class=&quot;token key atrule&quot;&gt;static_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;targets&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;localhost:9100&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The whole config yaml file now should have the following content.&lt;/p&gt;
+&lt;pre class=&quot;language-yaml&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;&lt;span class=&quot;token key atrule&quot;&gt;global&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token key atrule&quot;&gt;scrape_interval&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; 15s
+  &lt;span class=&quot;token key atrule&quot;&gt;evaluation_interval&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; 15s
+
+&lt;span class=&quot;token key atrule&quot;&gt;alerting&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token key atrule&quot;&gt;alertmanagers&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;static_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;targets&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+
+&lt;span class=&quot;token key atrule&quot;&gt;rule_files&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+
+&lt;span class=&quot;token key atrule&quot;&gt;scrape_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;job_name&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;prome&quot;&lt;/span&gt;
+    &lt;span class=&quot;token key atrule&quot;&gt;static_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;targets&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;localhost:9090&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;job_name&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;node_exporter&quot;&lt;/span&gt;
+    &lt;span class=&quot;token key atrule&quot;&gt;static_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;targets&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;localhost:9100&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Run the prometheus.&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ ./prometheus &lt;span class=&quot;token parameter variable&quot;&gt;--config.file&lt;/span&gt; prometheus.yml&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Open the prometheus targets page at &lt;strong&gt;localhost:9090/targets&lt;/strong&gt;. It should now
+show 2 targets.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-3/rBLpxuxuMT-2040.avif 2040w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-3/rBLpxuxuMT-2040.webp 2040w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-3/rBLpxuxuMT-2040.png&quot; alt=&quot;Prometheus with 2 targets&quot; width=&quot;2040&quot; height=&quot;814&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;With that you can query the metrics and graph them using
+&lt;a href=&quot;localhost:9090/graph&quot;&gt;the graph page in prometheus&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;That&#39;s it for now. In the next post, we are going to use grafana to create
+dashboard for monitoring our machine.&lt;/p&gt;
+    </content>
+  </entry>
+
+  <entry>
+    <title>Prometheus&#39; Metrics</title>
+    <link href="https://catsoncontainer.com/blog/prometheus-2/" />
+    <updated>2024-06-24T00:00:00Z</updated>
+    <id>https://catsoncontainer.com/blog/prometheus-2/</id>
+    <content type="html">&lt;p&gt;Continuing from the &lt;a href=&quot;https://catsoncontainer.com/posts/prometheus-1&quot;&gt;previous post&lt;/a&gt;, let&#39;s check on the
+metrics provided by prometheus.&lt;/p&gt;
+&lt;h2 id=&quot;the-metrics&quot;&gt;The metrics&lt;/h2&gt;
+&lt;p&gt;If you go back to Prometheus UI on the targets page, there is one target
+currently watched by prometheus. The endpoint for that target is
+&lt;a href=&quot;http://localhost:9090/metrics&quot;&gt;http://localhost:9090/metrics&lt;/a&gt;. So by default
+when you run prometheus, it will also serve its own metrics at port 9090.&lt;/p&gt;
+&lt;p&gt;Click the link on the targets page, you will see the metrics.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-2/IY60_P70E6-2294.avif 2294w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-2/IY60_P70E6-2294.webp 2294w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-2/IY60_P70E6-2294.png&quot; alt=&quot;Prometheus targets&quot; width=&quot;2294&quot; height=&quot;1022&quot;&gt;&lt;/picture&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-2/R4atf8psl1-2080.avif 2080w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-2/R4atf8psl1-2080.webp 2080w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-2/R4atf8psl1-2080.png&quot; alt=&quot;Prometheus metrics&quot; width=&quot;2080&quot; height=&quot;592&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;Each line in that page is a metric, except for line started with a #, which are
+the documentation for the metric that comes after those lines. For example the
+very first metric called &lt;strong&gt;go_gc_cycles_automatic_gc_cycles_total&lt;/strong&gt;. In the page
+it&#39;s shown like this.&lt;/p&gt;
+&lt;pre class=&quot;language-promql&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-promql&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# HELP go_gc_cycles_automatic_gc_cycles_total Count of completed GC cycles generated by the Go runtime.&lt;/span&gt;
+&lt;span class=&quot;token comment&quot;&gt;# TYPE go_gc_cycles_automatic_gc_cycles_total counter&lt;/span&gt;
+go_gc_cycles_automatic_gc_cycles_total &lt;span class=&quot;token number&quot;&gt;16&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The first line, which is started with &lt;code&gt;# HELP&lt;/code&gt;, is the description of the metric.
+The second line, which is started with &lt;code&gt;# TYPE&lt;/code&gt;, is the type of the metric,
+&lt;strong&gt;counter&lt;/strong&gt;. It is one of metric types in prometheus. The third line is the
+metric and its value. Notice that it has no unit, only the value.&lt;/p&gt;
+&lt;h2 id=&quot;the-labels&quot;&gt;The labels&lt;/h2&gt;
+&lt;p&gt;While reading the metrics you might notice that some metrics have curly braces
+with some kind of key-value pair in it. Like,&lt;/p&gt;
+&lt;pre class=&quot;language-promql&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-promql&quot;&gt;go_gc_heap_allocs_by_size_bytes_bucket&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;le&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;8.999999999999998&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;19461&lt;/span&gt;
+go_gc_heap_allocs_by_size_bytes_bucket&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;le&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;24.999999999999996&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;130267&lt;/span&gt;
+go_gc_heap_allocs_by_size_bytes_bucket&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;le&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;64.99999999999999&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;304207&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;or,&lt;/p&gt;
+&lt;pre class=&quot;language-promql&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-promql&quot;&gt;prometheus_engine_query_duration_seconds&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;slice&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;inner_eval&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;quantile&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;0.5&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0.000583584&lt;/span&gt;
+prometheus_engine_query_duration_seconds&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;slice&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;inner_eval&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;quantile&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;0.9&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0.000583584&lt;/span&gt;
+prometheus_engine_query_duration_seconds&lt;span class=&quot;token context-labels&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;slice&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;inner_eval&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;token label-key attr-name&quot;&gt;quantile&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token label-value attr-value&quot;&gt;&quot;0.99&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt; &lt;span class=&quot;token number&quot;&gt;0.000583584&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Those are labels. The keys in those pairs are the label name and the values are
+the label values. For now, for the prometheus metrics that we don&#39;t really
+understand, the labels might not make a lot of sense. Later on when we use it
+with &lt;a href=&quot;https://prometheus.io/docs/guides/node-exporter/&quot;&gt;node exporter&lt;/a&gt;
+it will make a lot more sense.&lt;/p&gt;
+&lt;h2 id=&quot;metrics-scraping&quot;&gt;Metrics scraping&lt;/h2&gt;
+&lt;p&gt;So basically for the one target that the prometheus is monitoring currently,
+prometheus will get the metrics from the endpoint, localhost:9090/metrics, and
+store it. How often prometheus scrapes the metrics is determined by the
+configuration used. So if we go back to the &lt;strong&gt;prometheus.yaml&lt;/strong&gt; file,&lt;/p&gt;
+&lt;pre class=&quot;language-yaml&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;&lt;span class=&quot;token key atrule&quot;&gt;global&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token key atrule&quot;&gt;scrape_interval&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; 15s &lt;span class=&quot;token comment&quot;&gt;# Set the scrape interval to every 15 seconds. Default is every 1 minute.&lt;/span&gt;
+  &lt;span class=&quot;token key atrule&quot;&gt;evaluation_interval&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; 15s &lt;span class=&quot;token comment&quot;&gt;# Evaluate rules every 15 seconds. The default is every 1 minute.&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;, we can see that prometheus scrapes the metric every 15 seconds.&lt;/p&gt;
+&lt;h2 id=&quot;the-graph&quot;&gt;The graph&lt;/h2&gt;
+&lt;p&gt;One last thing before we finished this post, prometheus helps us to graph our
+metrics by providing a graph page. It&#39;s on the top menu of the prometheus UI.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-2/bkkpto5Qmh-1936.avif 1936w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-2/bkkpto5Qmh-1936.webp 1936w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-2/bkkpto5Qmh-1936.png&quot; alt=&quot;Prometheus UI top menu&quot; width=&quot;1936&quot; height=&quot;116&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;Click &lt;strong&gt;Graph&lt;/strong&gt; and it will open the graph page. On that page, there is a field
+to input the expression for metrics. Let&#39;s type in &lt;strong&gt;go_gc_cycles_total_gc_cycles_total&lt;/strong&gt;. It&#39;s one of metrics with type counter. So a counter metrics is a metrics
+with value that always go up. After you type in the metrics name, click the
+&lt;strong&gt;Execute&lt;/strong&gt; button. It will show you its current value.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-2/I-VfR_BIH--2862.avif 2862w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-2/I-VfR_BIH--2862.webp 2862w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-2/I-VfR_BIH--2862.png&quot; alt=&quot;Prometheus metrics table&quot; width=&quot;2862&quot; height=&quot;706&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;Below the field to type in the expression, there is a &lt;strong&gt;Graph&lt;/strong&gt; tab just at the right
+side of &lt;strong&gt;Table&lt;/strong&gt;. Click on that and it will show you the graph of the metrics.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-2/iOQpnmwjJW-2840.avif 2840w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-2/iOQpnmwjJW-2840.webp 2840w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-2/iOQpnmwjJW-2840.png&quot; alt=&quot;Prometheus metrics graph&quot; width=&quot;2840&quot; height=&quot;1306&quot;&gt;&lt;/picture&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;In this post, we discuss a little bit about prometheus&#39; metrics and labels. Also
+we discuss about how to see the graph of a metrics. In the next post, we will use
+prometheus&#39; node exporter to monitor our local machine&#39;s CPU and memory usage.&lt;/p&gt;
+    </content>
+  </entry>
+
+  <entry>
+    <title>Prometheus - Getting started</title>
+    <link href="https://catsoncontainer.com/blog/prometheus-1/" />
+    <updated>2024-06-20T00:00:00Z</updated>
+    <id>https://catsoncontainer.com/blog/prometheus-1/</id>
+    <content type="html">&lt;p&gt;The simplest way to start learning Prometheus is to install it in your laptop
+and see what it&#39;s all about. You can use it as a monitoring tool for your machine.
+So let&#39;s do that.&lt;/p&gt;
+&lt;h2 id=&quot;download-the-thing&quot;&gt;Download the thing&lt;/h2&gt;
+&lt;p&gt;Go to its &lt;a href=&quot;https://prometheus.io/download&quot;&gt;download page&lt;/a&gt;
+and find the &lt;strong&gt;prometheus&lt;/strong&gt; section. You will find there the tar.gz file for
+Linux, Mac, and Windows. Download the one that suits your machine&#39;s OS. Mine is
+Mac so I will download the Darwin file. Just downloaded, now I have
+&lt;strong&gt;prometheus-2.53.0.darwin-amd64.tar.gz&lt;/strong&gt; file in my machine.&lt;/p&gt;
+&lt;h2 id=&quot;extract-and-check-the-file&quot;&gt;Extract and check the file&lt;/h2&gt;
+&lt;p&gt;Now using command line:&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ &lt;span class=&quot;token function&quot;&gt;tar&lt;/span&gt; xzvf prometheus-2.53.0.darwin-amd64.tar.gz&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;There is a new directory named &lt;strong&gt;prometheus-2.53.0.darwin-amd64&lt;/strong&gt; in my
+&lt;strong&gt;Downloads&lt;/strong&gt; directory now. I am moving it to my &lt;strong&gt;~/opt&lt;/strong&gt; for convenience.&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ &lt;span class=&quot;token function&quot;&gt;mv&lt;/span&gt; prometheus-2.53.0.darwin-amd64 ~/opt/prometheus&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Inside &lt;strong&gt;~/opt/prometheus&lt;/strong&gt; you should have &lt;strong&gt;prometheus&lt;/strong&gt; binary and its config
+file, &lt;strong&gt;prometheus.yml&lt;/strong&gt;. The important thing to know for now is that to run
+prometheus we need a configuration file and we are going to use that yaml file
+as our configuration file.&lt;/p&gt;
+&lt;h2 id=&quot;run-it-and-browse-the-metrics&quot;&gt;Run it and browse the metrics&lt;/h2&gt;
+&lt;p&gt;Now from inside &lt;strong&gt;~/opt/prometheus&lt;/strong&gt; directory run the binary.&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;$ ./prometheus &lt;span class=&quot;token parameter variable&quot;&gt;--config.file&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;prometheus.yml&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Open your preferred browser and access &lt;strong&gt;http://localhost:9090&lt;/strong&gt;. You now have
+prometheus UI in your browser.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-1/VT7M-yQr6a-2880.avif 2880w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-1/VT7M-yQr6a-2880.webp 2880w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-1/VT7M-yQr6a-2880.png&quot; alt=&quot;Prometheus UI in browser&quot; width=&quot;2880&quot; height=&quot;996&quot;&gt;&lt;/picture&gt;
+&lt;p&gt;But what metrics are available? Where are they coming from? Check the targets
+scraped by Prometheus by clicking &lt;strong&gt;Status&lt;/strong&gt; at the top menu and then click
+&lt;strong&gt;Targets&lt;/strong&gt;.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-1/QCLX0TAWVW-2044.avif 2044w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-1/QCLX0TAWVW-2044.webp 2044w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-1/QCLX0TAWVW-2044.png&quot; alt=&quot;Prometheus UI in browser&quot; width=&quot;2044&quot; height=&quot;670&quot;&gt;&lt;/picture&gt;
+&lt;h2 id=&quot;config-file&quot;&gt;Config file&lt;/h2&gt;
+&lt;p&gt;To understand why you have 1 target the first time you run prometheus, read the
+content of &lt;strong&gt;prometheus.yml&lt;/strong&gt; file.&lt;/p&gt;
+&lt;pre class=&quot;language-yaml&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;&lt;span class=&quot;token comment&quot;&gt;# my global config&lt;/span&gt;
+&lt;span class=&quot;token key atrule&quot;&gt;global&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token key atrule&quot;&gt;scrape_interval&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; 15s &lt;span class=&quot;token comment&quot;&gt;# Set the scrape interval to every 15 seconds. Default is every 1 minute.&lt;/span&gt;
+  &lt;span class=&quot;token key atrule&quot;&gt;evaluation_interval&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; 15s &lt;span class=&quot;token comment&quot;&gt;# Evaluate rules every 15 seconds. The default is every 1 minute.&lt;/span&gt;
+  &lt;span class=&quot;token comment&quot;&gt;# scrape_timeout is set to the global default (10s).&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# Alertmanager configuration&lt;/span&gt;
+&lt;span class=&quot;token key atrule&quot;&gt;alerting&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token key atrule&quot;&gt;alertmanagers&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+    &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;static_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;targets&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+          &lt;span class=&quot;token comment&quot;&gt;# - alertmanager:9093&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# Load rules once and periodically evaluate them according to the global &#39;evaluation_interval&#39;.&lt;/span&gt;
+&lt;span class=&quot;token key atrule&quot;&gt;rule_files&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token comment&quot;&gt;# - &quot;first_rules.yml&quot;&lt;/span&gt;
+  &lt;span class=&quot;token comment&quot;&gt;# - &quot;second_rules.yml&quot;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;# A scrape configuration containing exactly one endpoint to scrape:&lt;/span&gt;
+&lt;span class=&quot;token comment&quot;&gt;# Here it&#39;s Prometheus itself.&lt;/span&gt;
+&lt;span class=&quot;token key atrule&quot;&gt;scrape_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token comment&quot;&gt;# The job name is added as a label `job=&amp;lt;job_name&gt;` to any timeseries scraped from this config.&lt;/span&gt;
+  &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;job_name&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;prometheus&quot;&lt;/span&gt;
+
+    &lt;span class=&quot;token comment&quot;&gt;# metrics_path defaults to &#39;/metrics&#39;&lt;/span&gt;
+    &lt;span class=&quot;token comment&quot;&gt;# scheme defaults to &#39;http&#39;.&lt;/span&gt;
+
+    &lt;span class=&quot;token key atrule&quot;&gt;static_configs&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+      &lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;token key atrule&quot;&gt;targets&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;localhost:9090&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;At the top level there are 4 fields: &lt;code&gt;global&lt;/code&gt;, &lt;code&gt;alerting&lt;/code&gt;, &lt;code&gt;rule_files&lt;/code&gt;, and
+&lt;code&gt;scrape_configs&lt;/code&gt;. Ignore &lt;code&gt;alerting&lt;/code&gt; and &lt;code&gt;rule_files&lt;/code&gt; for now. If you check the
+value &lt;code&gt;alerting&lt;/code&gt;, the &lt;code&gt;targets&lt;/code&gt; itself is empty. The same with &lt;code&gt;rule_files&lt;/code&gt;. And
+we don&#39;t need them for now.&lt;/p&gt;
+&lt;p&gt;The values in &lt;code&gt;global&lt;/code&gt; are the default value for the rest of configuration when
+it applies. Inside &lt;code&gt;scraper_configs&lt;/code&gt; there are items, each of them is a scrape
+config. Currently we have 1 item in &lt;code&gt;scrape_configs&lt;/code&gt;, a scrape config with
+&lt;code&gt;prometheus&lt;/code&gt; as the &lt;code&gt;job_name&lt;/code&gt;. Let&#39;s change the value of &lt;code&gt;job_name&lt;/code&gt; to &lt;code&gt;prome&lt;/code&gt;.
+Stop the currently running prometheus in your terminal by pressing Ctrl-C. And
+run it back. It will use the updated config file.&lt;/p&gt;
+&lt;picture&gt;&lt;source type=&quot;image/avif&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-1/rBLpxuxuMT-2040.avif 2040w&quot;&gt;&lt;source type=&quot;image/webp&quot; srcset=&quot;https://catsoncontainer.com/blog/prometheus-1/rBLpxuxuMT-2040.webp 2040w&quot;&gt;&lt;img loading=&quot;lazy&quot; decoding=&quot;async&quot; src=&quot;https://catsoncontainer.com/blog/prometheus-1/rBLpxuxuMT-2040.png&quot; alt=&quot;Prometheus UI in browser&quot; width=&quot;2040&quot; height=&quot;814&quot;&gt;&lt;/picture&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;We conclude the post for now because it will be too long and too boring to read.
+In the next post I will write about the metrics provided by prometheus itself.
+Then after that we will install prometheus&#39; node exporter to monitoring our
+local machine/laptop/PC.&lt;/p&gt;
+    </content>
+  </entry>
+
+  <entry>
+    <title>AWS SDK Authentication on application running in Azure Kubernetes Service (Part 1)</title>
+    <link href="https://catsoncontainer.com/blog/aws-sdk-authentication-in-aks/" />
+    <updated>2024-04-07T00:00:00Z</updated>
+    <id>https://catsoncontainer.com/blog/aws-sdk-authentication-in-aks/</id>
+    <content type="html">&lt;p&gt;I am in the progress of moving our services from AWS ECS to Azure Kubernetes
+Service (AKS). One of the problems that I encountered is how to use AWS SDK
+from AKS, meaning how my services can authenticate itself to AWS. In ECS it was
+done by assigning IAM role to my task in ECS service. After researching about
+this, these are my options:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;using access keys&lt;/li&gt;
+&lt;li&gt;using OpenID Connect (OIDC)&lt;/li&gt;
+&lt;li&gt;using IAM Roles Anywhere (abbreviated to IRAw, not official abbreviation from AWS, just to save me from typing too long)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;a href=&quot;https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html&quot;&gt;This page in AWS SDK docs&lt;/a&gt;
+lists AWS SDK standardized credential providers.&lt;/p&gt;
+&lt;h2 id=&quot;using-access-keys&quot;&gt;Using access keys&lt;/h2&gt;
+&lt;p&gt;This is probably the easiest way to set up and less hassle. But using access keys
+is considered to be the least secure one out of the three. Also, the engineer
+before me set up our AWS accounts so that we can&#39;t create an account with access
+keys. The secure and correct way. It would be really wrong for me to undo that
+policy just because I don&#39;t bother to choose better ways.&lt;/p&gt;
+&lt;h2 id=&quot;using-openid-connect&quot;&gt;Using OpenID Connect&lt;/h2&gt;
+&lt;p&gt;Between using OIDC and IRAw, from my research I found out that IRAw is the most
+recommended one. This is mentioned in &lt;a href=&quot;https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#bp-workloads-use-roles&quot;&gt;AWS IAM best
+practices&lt;/a&gt;.
+But the problem is to use this I need to set up stuffs related to certificates,
+which I try to avoid. So I decided to go with OIDC.&lt;/p&gt;
+&lt;p&gt;So I did more research and found that to go this route the solution will comprise
+of the combination of the followings:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_create_oidc.html&quot;&gt;creating OIDC provider in my AWS&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-idp_oidc.html&quot;&gt;editing my services&#39; IAM roles to trust OIDC&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview?tabs=dotnet&quot;&gt;using Entra Workload ID in my AKS cluster&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://learn.microsoft.com/en-us/azure/aks/learn/tutorial-kubernetes-workload-identity&quot;&gt;using workload identity in my application in AKS&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The last item above actually consists of:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Creating a managed identity for each application&lt;/li&gt;
+&lt;li&gt;Creating a service account object in kubernetes and in the service account add an annotation
+with the key &lt;code&gt;azure.workload.identity/client-id&lt;/code&gt; and setting its value to the managed identity&#39;s client ID&lt;/li&gt;
+&lt;li&gt;Creating a federated identity credential for the managed identity with the subject of
+the credential referring to the service account&#39;s name and namespace&lt;/li&gt;
+&lt;li&gt;Configuring the pod to use the service account and adding label
+&lt;code&gt;azure.workload.identity/use&lt;/code&gt; in the pod and set it to &lt;code&gt;&#39;true&#39;&lt;/code&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;It&#39;s a lot of things but I understand what I am setting up and what it&#39;s for.
+Anytime I encounter an issue I will check all of those things. Also I use
+Pulumi to help with creating required things on the AWS side (editing AWS IAM
+roles&#39; trust policy) and the Azure side (managed identities and federated
+credentials), which makes this setup a bit easier. Also I found that there is a
+limitation on using Pulumi to manage OIDC provider in AWS. Maybe I will write
+about that later.&lt;/p&gt;
+&lt;h2 id=&quot;the-code&quot;&gt;The code&lt;/h2&gt;
+&lt;p&gt;After setting all of those now anytime I run the pod, AKS will automatically
+set up all required Azure credentials in my container in the environment
+variables. In short the way how this all works is:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The app in the pod get an Azure identity&lt;/li&gt;
+&lt;li&gt;With the help of federated identity credential the app can contact AWS OpenID Connect provider&lt;/li&gt;
+&lt;li&gt;Using that provider, the app can assume the intended AWS IAM Role that has been set up to trust it&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;To understand more about how it works, let&#39;s check &lt;a href=&quot;https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview?tabs=javascript&quot;&gt;Azure
+documentation about using workload identity in AKS&lt;/a&gt;
+the page provides a sample code:&lt;/p&gt;
+&lt;pre class=&quot;language-javascript&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-javascript&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt; DefaultAzureCredential &lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;@azure/identity&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt; SecretClient &lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&quot;@azure/keyvault-secrets&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;token function-variable function&quot;&gt;main&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;async&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&gt;&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; keyVaultUrl &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; process&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;env&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;KEYVAULT_URL&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; secretName &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; process&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;env&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;SECRET_NAME&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; credential &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;token class-name&quot;&gt;DefaultAzureCredential&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; client &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;token class-name&quot;&gt;SecretClient&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;keyVaultUrl&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; credential&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+    &lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; secret &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;await&lt;/span&gt; client&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;getSecret&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;secretName&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;token function&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;catch&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token parameter&quot;&gt;error&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;token operator&quot;&gt;=&gt;&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+    console&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;error&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;An error occurred:&quot;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt; error&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+    process&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;exit&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token number&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The code shows how to get Azure credential and then use that to access secret
+key in Azure Key Vault. What interests me is how to get the Azure credentials.
+The main thing here is using that class, &lt;code&gt;DefaultAzureCredential&lt;/code&gt;, to get
+the credential. This is from &lt;a href=&quot;https://learn.microsoft.com/en-us/javascript/api/@azure/identity/defaultazurecredential?view=azure-node-latest#constructor-details&quot;&gt;the documentation&lt;/a&gt;:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;This credential provides a default ChainedTokenCredential configuration that should work for most applications that use the Azure SDK.&lt;/p&gt;
+&lt;p&gt;The following credential types will be tried, in order:&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;EnvironmentCredential&lt;/li&gt;
+&lt;li&gt;WorkloadIdentityCredential&lt;/li&gt;
+&lt;li&gt;ManagedIdentityCredential&lt;/li&gt;
+&lt;li&gt;AzureCliCredential&lt;/li&gt;
+&lt;li&gt;AzurePowerShellCredential&lt;/li&gt;
+&lt;li&gt;AzureDeveloperCliCredential&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Using Entra Workload ID in AKS will automatically configure required stuffs to use
+the second item in that credential list, &lt;code&gt;WorkloadIdentityCredential&lt;/code&gt;. &lt;a href=&quot;https://learn.microsoft.com/en-us/dotnet/api/azure.identity.workloadidentitycredential?view=azure-dotnet#constructors&quot;&gt;The documentation
+for that class in the .NET AWS SDK&lt;/a&gt;
+provide me with the details that I was looking for.&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Creates a new instance of the &lt;code&gt;WorkloadIdentityCredential&lt;/code&gt; with the default options.
+When no options are specified &lt;code&gt;AZURE_TENANT_ID&lt;/code&gt;, &lt;code&gt;AZURE_CLIENT_ID&lt;/code&gt; and
+&lt;code&gt;AZURE_FEDERATED_TOKEN_FILE&lt;/code&gt; must be specified in the environment.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Then with all those things configured, by the help of &lt;code&gt;kubectl exec&lt;/code&gt; I can check
+the environment variable of my app&#39;s container. Sure enough I found that
+&lt;code&gt;AZURE_TENANT_ID&lt;/code&gt;, &lt;code&gt;AZURE_CLIENT_ID&lt;/code&gt;, and &lt;code&gt;AZURE_FEDERATED_TOKEN_FILE&lt;/code&gt; environment
+variables were all set up automatically. The &lt;code&gt;AZURE_FEDERATED_TOKEN_FILE&lt;/code&gt; value
+is a path to a file injected by AKS, which contains a token that I assume is
+required to make all this works.&lt;/p&gt;
+&lt;p&gt;So how to connect all these to be able to authenticate to AWS? The &lt;code&gt;DefaultAzureCredential&lt;/code&gt;
+class has a method &lt;code&gt;getToken&lt;/code&gt;, which I assume is for getting an OIDC token or
+something along that line to authenticate to AWS. One thing to note, which I found
+after some trial and errors, is that if you are using client ID to get the token,
+you need to do it this way:&lt;/p&gt;
+&lt;pre class=&quot;language-javascript&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-javascript&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; azureClientId &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; process&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;env&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;AZURE_CLIENT_ID&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; credential &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;token class-name&quot;&gt;DefaultAzureCredential&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; token &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;await&lt;/span&gt; credential&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token function&quot;&gt;getToken&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token template-string&quot;&gt;&lt;span class=&quot;token template-punctuation string&quot;&gt;`&lt;/span&gt;&lt;span class=&quot;token interpolation&quot;&gt;&lt;span class=&quot;token interpolation-punctuation punctuation&quot;&gt;${&lt;/span&gt;azureClientId&lt;span class=&quot;token interpolation-punctuation punctuation&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;/.default&lt;/span&gt;&lt;span class=&quot;token template-punctuation string&quot;&gt;`&lt;/span&gt;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The key is the &lt;code&gt;/.default&lt;/code&gt; part. It doesn&#39;t work without it. This token
+can be used to authenticate the AWS SDK client, for example S3 client, like
+this:&lt;/p&gt;
+&lt;pre class=&quot;language-javascript&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-javascript&quot;&gt;&lt;span class=&quot;token keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt; S3Client &lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&#39;@aws-sdk/client-s3&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt; fromWebToken &lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;from&lt;/span&gt; &lt;span class=&quot;token string&quot;&gt;&#39;@aws-sdk/credential-providers&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;
+
+&lt;span class=&quot;token comment&quot;&gt;// The value for `token` is the one from the previous sample code&lt;/span&gt;
+&lt;span class=&quot;token keyword&quot;&gt;const&lt;/span&gt; client &lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;token keyword&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;token class-name&quot;&gt;S3Client&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;token literal-property property&quot;&gt;region&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;:&lt;/span&gt; process&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;env&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;AWS_REGION&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+	&lt;span class=&quot;token literal-property property&quot;&gt;credentials&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;token function&quot;&gt;fromWebToken&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;{&lt;/span&gt;
+		&lt;span class=&quot;token literal-property property&quot;&gt;roleArn&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;:&lt;/span&gt; process&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;env&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&#39;AWS_IAM_ROLE_ARN&#39;&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;,&lt;/span&gt;
+		&lt;span class=&quot;token literal-property property&quot;&gt;webIdentityToken&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;:&lt;/span&gt; token
+	&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;At first we (my team and I) are quite content with this solution. We only need
+to add some code to refresh the token since the token itself will expire in 24
+hours. Then we were done. We implemented it to a couple of services and
+deployed the services to staging environment. But then we found the problem.&lt;/p&gt;
+&lt;h2 id=&quot;the-problem-with-using-oidc&quot;&gt;The problem with using OIDC&lt;/h2&gt;
+&lt;p&gt;After implementing this new way in staging environment for a couple of services
+we found that there is a big problem with this solution. The latency are worse.
+More-than-few-seconds worse. There is an endpoint in one of our services that
+needs to call S3 and Textract service. When deployed in ECS, this service&#39;s
+latency is around 1-2 seconds. When deployed in AKS, it is now 6-8 seconds. We
+found that before doing the API call to S3 and Textract, the AWS SDK calls the
+AWS Security Token Service (STS). Make sense since it probably needs to do it
+to verify the token. What surprised us was the latency for that STS call is
+around 1.5 seconds. Multiply that by two, we got 3-4 seconds for verifying
+token only. We must have missed something.&lt;/p&gt;
+&lt;p&gt;There must be a way to do this, I think. Maybe we can cache that call or something.
+Or maybe there is a configuration for the SDK to bypass this or something like that.
+But I couldn&#39;t find it. Or maybe I can find it if I spent more time
+researching it. But I didn&#39;t because I remembered that OIDC is not the recommended
+way for this. I thought, yeah, maybe this is why it&#39;s not recommended.&lt;/p&gt;
+&lt;p&gt;I propose two solutions to my coworkers. First option is we create a new
+service, deployed in AWS, as some kind of gateway for all other services to
+access AWS API. But this is more work for the developers. Not something that I
+would like for them to do. Migration like this should be more works for the ops
+team, I think. Which brings me to the second option, which is something that I avoid to
+do the first place and something that&#39;s recommended by IAM best practice: using
+IAM Roles Anywhere.&lt;/p&gt;
+&lt;p&gt;(To be continued in part 2)&lt;/p&gt;
+    </content>
+  </entry>
+
+  <entry>
+    <title>Using Pulumi with multiple AWS accounts and S3 backend</title>
+    <link href="https://catsoncontainer.com/blog/pulumi-with-multiple-aws-account/" />
+    <updated>2023-12-24T00:00:00Z</updated>
+    <id>https://catsoncontainer.com/blog/pulumi-with-multiple-aws-account/</id>
+    <content type="html">&lt;p&gt;The way I usually use &lt;a href=&quot;https://www.terraform.io/&quot;&gt;Terraform&lt;/a&gt; is by storing each environment&#39;s state
+in different buckets. So the state for my development environment will be stored
+in an S3 bucket in the AWS account for development and the state for my staging
+environment will be stored in an S3 bucket in the staging account. The same thing
+with my production environment.&lt;/p&gt;
+&lt;p&gt;I just started using &lt;a href=&quot;https://pulumi.com&quot;&gt;Pulumi&lt;/a&gt; for about 3 weeks now and I tried to do
+the same thing. I got confused trying to figure out how to do it the same way I
+do it with Terraform. So, I searched online on how to do that and I found &lt;a href=&quot;https://github.com/pulumi/pulumi/issues/3567&quot;&gt;an
+issue in GitHub&lt;/a&gt;. &lt;a href=&quot;https://github.com/pulumi/pulumi/issues/11182#issuecomment-1297367585&quot;&gt;A Pulumi engineer suggested the
+OP&lt;/a&gt; to use environment variable to switch between backends.&lt;/p&gt;
+&lt;p&gt;I think it is feasible to do that. Anytime you want to change stack, for example
+to production stack, you then need to do:&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;&lt;span class=&quot;token builtin class-name&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;token assign-left variable&quot;&gt;PULUMI_BACKEND_URL&lt;/span&gt;&lt;span class=&quot;token operator&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;token string&quot;&gt;&quot;s3://bucket-for-pulumi-production&quot;&lt;/span&gt;
+pulumi stack &lt;span class=&quot;token keyword&quot;&gt;select&lt;/span&gt; production&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I might also create a function to do that, add it into my bash profile, so that
+instead of running 2 commands I can just run the function.&lt;/p&gt;
+&lt;p&gt;But then I thought &amp;quot;Why not just use the same backend for all stacks?&amp;quot;. I think
+it&#39;s simpler. I only then need to find a way to tell Pulumi to which AWS account
+a stack refers to, since my resources are separated into different AWS accounts
+based on the environment.&lt;/p&gt;
+&lt;p&gt;So I have &lt;code&gt;~/.aws/config&lt;/code&gt; file like this:&lt;/p&gt;
+&lt;pre class=&quot;language-toml&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-toml&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;profile org-dev&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;
+
+&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;profile org-staging&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;
+
+&lt;span class=&quot;token punctuation&quot;&gt;[&lt;/span&gt;profile org-production&lt;span class=&quot;token punctuation&quot;&gt;]&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;.&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;with &lt;strong&gt;org-dev&lt;/strong&gt;, &lt;strong&gt;org-staging&lt;/strong&gt;, and &lt;strong&gt;org-production&lt;/strong&gt; as AWS profiles for your
+work&#39;s development, staging, and production environments respectively. I need
+to define this AWS profile as a config for my Pulumi stack. We can do this
+using &lt;code&gt;pulumi config&lt;/code&gt; command (&lt;a href=&quot;https://www.pulumi.com/docs/cli/commands/pulumi_config/&quot;&gt;docs&lt;/a&gt;).&lt;/p&gt;
+&lt;p&gt;So, for example I have a stack named &lt;strong&gt;development&lt;/strong&gt;, then I run:&lt;/p&gt;
+&lt;pre class=&quot;language-bash&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-bash&quot;&gt;pulumi stack &lt;span class=&quot;token keyword&quot;&gt;select&lt;/span&gt; development
+pulumi config &lt;span class=&quot;token builtin class-name&quot;&gt;set&lt;/span&gt; aws:profile org-dev&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This way, anytime I am using &lt;strong&gt;development&lt;/strong&gt; stack, Pulumi knows that I am
+managing resources in &lt;strong&gt;org-dev&lt;/strong&gt; AWS profile.&lt;/p&gt;
+&lt;p&gt;Also to tell Pulumi that I want to have my backend in a bucket in my production
+AWS account I need to add this line in &lt;code&gt;Pulumi.yaml&lt;/code&gt; file:&lt;/p&gt;
+&lt;pre class=&quot;language-yaml&quot; tabindex=&quot;0&quot;&gt;&lt;code class=&quot;language-yaml&quot;&gt;&lt;span class=&quot;token punctuation&quot;&gt;...&lt;/span&gt;.
+&lt;span class=&quot;token key atrule&quot;&gt;backend&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;token key atrule&quot;&gt;url&lt;/span&gt;&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt; s3&lt;span class=&quot;token punctuation&quot;&gt;:&lt;/span&gt;//bucket&lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;for&lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;pulumi&lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;state&lt;span class=&quot;token punctuation&quot;&gt;?&lt;/span&gt;region=my&lt;span class=&quot;token punctuation&quot;&gt;-&lt;/span&gt;region&lt;span class=&quot;token important&quot;&gt;&amp;amp;awssdk=v2&amp;amp;profile=org-production&lt;/span&gt;
+&lt;span class=&quot;token punctuation&quot;&gt;...&lt;/span&gt;.&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;That&#39;s it. Pulumi now knows where I store the state and using which AWS account.
+Also it knows a stack refers to resources in which AWS account.&lt;/p&gt;
+    </content>
+  </entry>
+</feed>

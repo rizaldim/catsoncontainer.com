@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Prometheus - Getting started</title>
+		<meta name="description" content="Getting started on using Prometheus">
+		<link rel="alternate" href="feed/feed.xml" type="application/atom+xml" title="Rizaldi&#39;s Personal Website">
+		
+		<style>/**
+ * okaidia theme for JavaScript, CSS and HTML
+ * Loosely based on Monokai textmate theme by http://www.monokai.nl/
+ * @author ocodia
+ */
+
+code[class*="language-"],
+pre[class*="language-"] {
+	color: #f8f8f2;
+	background: none;
+	text-shadow: 0 1px rgba(0, 0, 0, 0.3);
+	font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+	font-size: 1em;
+	text-align: left;
+	white-space: pre;
+	word-spacing: normal;
+	word-break: normal;
+	word-wrap: normal;
+	line-height: 1.5;
+
+	-moz-tab-size: 4;
+	-o-tab-size: 4;
+	tab-size: 4;
+
+	-webkit-hyphens: none;
+	-moz-hyphens: none;
+	-ms-hyphens: none;
+	hyphens: none;
+}
+
+/* Code blocks */
+pre[class*="language-"] {
+	padding: 1em;
+	margin: .5em 0;
+	overflow: auto;
+	border-radius: 0.3em;
+}
+
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+	background: #272822;
+}
+
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+	padding: .1em;
+	border-radius: .3em;
+	white-space: normal;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+	color: #8292a2;
+}
+
+.token.punctuation {
+	color: #f8f8f2;
+}
+
+.token.namespace {
+	opacity: .7;
+}
+
+.token.property,
+.token.tag,
+.token.constant,
+.token.symbol,
+.token.deleted {
+	color: #f92672;
+}
+
+.token.boolean,
+.token.number {
+	color: #ae81ff;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+	color: #a6e22e;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string,
+.token.variable {
+	color: #f8f8f2;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.function,
+.token.class-name {
+	color: #e6db74;
+}
+
+.token.keyword {
+	color: #66d9ef;
+}
+
+.token.regex,
+.token.important {
+	color: #fd971f;
+}
+
+.token.important,
+.token.bold {
+	font-weight: bold;
+}
+.token.italic {
+	font-style: italic;
+}
+
+.token.entity {
+	cursor: help;
+}
+/*
+ * New diff- syntax
+ */
+
+pre[class*="language-diff-"] {
+	--eleventy-code-padding: 1.25em;
+	padding-left: var(--eleventy-code-padding);
+	padding-right: var(--eleventy-code-padding);
+}
+.token.deleted {
+	background-color: hsl(0, 51%, 37%);
+	color: inherit;
+}
+.token.inserted {
+	background-color: hsl(126, 31%, 39%);
+	color: inherit;
+}
+
+/* Make the + and - characters unselectable for copy/paste */
+.token.prefix.unchanged,
+.token.prefix.inserted,
+.token.prefix.deleted {
+	-webkit-user-select: none;
+	user-select: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding-top: 2px;
+	padding-bottom: 2px;
+}
+.token.prefix.inserted,
+.token.prefix.deleted {
+	width: var(--eleventy-code-padding);
+	background-color: rgba(0,0,0,.2);
+}
+
+/* Optional: full-width background color */
+.token.inserted:not(.prefix),
+.token.deleted:not(.prefix) {
+	display: block;
+	margin-left: calc(-1 * var(--eleventy-code-padding));
+	margin-right: calc(-1 * var(--eleventy-code-padding));
+	text-decoration: none; /* override del, ins, mark defaults */
+	color: inherit; /* override del, ins, mark defaults */
+}
+/* This is an arbitrary CSS string added to the bundle */
+/* Defaults */
+:root {
+	--font-family: -apple-system, system-ui, sans-serif;
+	--font-family-monospace: Consolas, Menlo, Monaco, Andale Mono WT, Andale Mono, Lucida Console, Lucida Sans Typewriter, DejaVu Sans Mono, Bitstream Vera Sans Mono, Liberation Mono, Nimbus Mono L, Courier New, Courier, monospace;
+}
+
+/* Theme colors */
+:root {
+	--color-gray-20: #e0e0e0;
+	--color-gray-50: #C0C0C0;
+	--color-gray-90: #333;
+
+	--background-color: #fff;
+
+	--text-color: var(--color-gray-90);
+	--text-color-link: #082840;
+	--text-color-link-active: #5f2b48;
+	--text-color-link-visited: #17050F;
+
+	--syntax-tab-size: 2;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--color-gray-20: #e0e0e0;
+		--color-gray-50: #C0C0C0;
+		--color-gray-90: #dad8d8;
+
+		/* --text-color is assigned to --color-gray-_ above */
+		--text-color-link: #1493fb;
+		--text-color-link-active: #6969f7;
+		--text-color-link-visited: #a6a6f8;
+
+		--background-color: #15202b;
+	}
+}
+
+
+/* Global stylesheet */
+* {
+	box-sizing: border-box;
+}
+
+@view-transition {
+	navigation: auto;
+}
+
+html,
+body {
+	padding: 0;
+	margin: 0 auto;
+	font-family: var(--font-family);
+	color: var(--text-color);
+	background-color: var(--background-color);
+}
+html {
+	overflow-y: scroll;
+}
+body {
+	max-width: 80ch;
+}
+
+/* https://www.a11yproject.com/posts/how-to-hide-content/ */
+.visually-hidden {
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	height: 1px;
+	overflow: hidden;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+
+/* Fluid images via https://www.zachleat.com/web/fluid-images/ */
+img {
+  max-width: 100%;
+}
+img[width][height] {
+  height: auto;
+}
+img[src$=".svg"] {
+  width: 100%;
+  height: auto;
+  max-width: none;
+}
+
+p:last-child {
+	margin-bottom: 0;
+}
+p {
+	line-height: 1.5;
+}
+
+li {
+	line-height: 1.5;
+}
+
+a[href] {
+	color: var(--text-color-link);
+}
+a[href]:visited {
+	color: var(--text-color-link-visited);
+}
+a[href]:hover,
+a[href]:active {
+	color: var(--text-color-link-active);
+}
+
+main,
+footer {
+	padding: 1rem;
+}
+main :first-child {
+	margin-top: 0;
+}
+
+header {
+	border-bottom: 1px dashed var(--color-gray-20);
+}
+header:after {
+	content: "";
+	display: table;
+	clear: both;
+}
+
+.links-nextprev {
+	display: flex;
+	justify-content: space-between;
+	gap: .5em 1em;
+	list-style: "";
+	border-top: 1px dashed var(--color-gray-20);
+	padding: 1em 0;
+}
+.links-nextprev > * {
+	flex-grow: 1;
+}
+.links-nextprev-next {
+	text-align: right;
+}
+
+table {
+	margin: 1em 0;
+}
+table td,
+table th {
+	padding-right: 1em;
+}
+
+pre,
+code {
+	font-family: var(--font-family-monospace);
+}
+pre:not([class*="language-"]) {
+	margin: .5em 0;
+	line-height: 1.375; /* 22px /16 */
+	-moz-tab-size: var(--syntax-tab-size);
+	-o-tab-size: var(--syntax-tab-size);
+	tab-size: var(--syntax-tab-size);
+	-webkit-hyphens: none;
+	-ms-hyphens: none;
+	hyphens: none;
+	direction: ltr;
+	text-align: left;
+	white-space: pre;
+	word-spacing: normal;
+	word-break: normal;
+	overflow-x: auto;
+}
+code {
+	word-break: break-all;
+}
+
+/* Header */
+header {
+	display: flex;
+	gap: 1em .5em;
+	flex-wrap: wrap;
+	align-items: center;
+	padding: 1em;
+}
+.home-link {
+	font-size: 1em; /* 16px /16 */
+	font-weight: 700;
+	margin-right: 2em;
+}
+.home-link:link:not(:hover) {
+	text-decoration: none;
+}
+
+/* Nav */
+.nav {
+	display: flex;
+	padding: 0;
+	margin: 0;
+	list-style: none;
+}
+.nav-item {
+	display: inline-block;
+	margin-right: 1em;
+}
+.nav-item a[href]:not(:hover) {
+	text-decoration: none;
+}
+.nav a[href][aria-current="page"] {
+	text-decoration: underline;
+}
+
+/* Posts list */
+.postlist {
+	list-style: none;
+	padding: 0;
+	padding-left: 1.5rem;
+}
+.postlist-item {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	counter-increment: start-from -1;
+	margin-bottom: 1em;
+}
+.postlist-item:before {
+	display: inline-block;
+	pointer-events: none;
+	content: "" counter(start-from, decimal-leading-zero) ". ";
+	line-height: 100%;
+	text-align: right;
+	margin-left: -1.5rem;
+}
+.postlist-date,
+.postlist-item:before {
+	font-size: 0.8125em; /* 13px /16 */
+	color: var(--color-gray-90);
+}
+.postlist-date {
+	word-spacing: -0.5px;
+}
+.postlist-link {
+	font-size: 1.1875em; /* 19px /16 */
+	font-weight: 700;
+	flex-basis: calc(100% - 1.5rem);
+	padding-left: .25em;
+	padding-right: .5em;
+	text-underline-position: from-font;
+	text-underline-offset: 0;
+	text-decoration-thickness: 1px;
+}
+.postlist-item-active .postlist-link {
+	font-weight: bold;
+}
+
+/* Tags */
+.post-tag {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	text-transform: capitalize;
+	font-style: italic;
+}
+.postlist-item > .post-tag {
+	align-self: center;
+}
+
+/* Tags list */
+.post-metadata {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: .5em;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+.post-metadata time {
+	margin-right: 1em;
+}</style>
+	</head>
+	<body>
+		<a href="#skip" class="visually-hidden">Skip to main content</a>
+
+		<header>
+			<a href="/" class="home-link">Rizaldi&#39;s Personal Website</a>
+			<nav>
+				<h2 class="visually-hidden" id="top-level-navigation-menu">Top level navigation menu</h2>
+				<ul class="nav">
+					<li class="nav-item"><a href="/">Home</a></li>
+					<li class="nav-item"><a href="/blog/">Archive</a></li>
+					<li class="nav-item"><a href="/about/">About</a></li>
+					<li class="nav-item"><a href="/feed/feed.xml">Feed</a></li>
+				</ul>
+			</nav>
+		</header>
+
+		<main id="skip">
+			<heading-anchors>
+				
+<h1 id="prometheus-getting-started">Prometheus - Getting started</h1>
+
+<ul class="post-metadata">
+	<li><time datetime="2024-06-20">20 June 2024</time></li>
+	<li><a href="/tags/prometheus/" class="post-tag">prometheus</a></li>
+</ul>
+
+<p>The simplest way to start learning Prometheus is to install it in your laptop
+and see what it's all about. You can use it as a monitoring tool for your machine.
+So let's do that.</p>
+<h2 id="download-the-thing">Download the thing</h2>
+<p>Go to its <a href="https://prometheus.io/download">download page</a>
+and find the <strong>prometheus</strong> section. You will find there the tar.gz file for
+Linux, Mac, and Windows. Download the one that suits your machine's OS. Mine is
+Mac so I will download the Darwin file. Just downloaded, now I have
+<strong>prometheus-2.53.0.darwin-amd64.tar.gz</strong> file in my machine.</p>
+<h2 id="extract-and-check-the-file">Extract and check the file</h2>
+<p>Now using command line:</p>
+<pre class="language-bash" tabindex="0"><code class="language-bash">$ <span class="token function">tar</span> xzvf prometheus-2.53.0.darwin-amd64.tar.gz</code></pre>
+<p>There is a new directory named <strong>prometheus-2.53.0.darwin-amd64</strong> in my
+<strong>Downloads</strong> directory now. I am moving it to my <strong>~/opt</strong> for convenience.</p>
+<pre class="language-bash" tabindex="0"><code class="language-bash">$ <span class="token function">mv</span> prometheus-2.53.0.darwin-amd64 ~/opt/prometheus</code></pre>
+<p>Inside <strong>~/opt/prometheus</strong> you should have <strong>prometheus</strong> binary and its config
+file, <strong>prometheus.yml</strong>. The important thing to know for now is that to run
+prometheus we need a configuration file and we are going to use that yaml file
+as our configuration file.</p>
+<h2 id="run-it-and-browse-the-metrics">Run it and browse the metrics</h2>
+<p>Now from inside <strong>~/opt/prometheus</strong> directory run the binary.</p>
+<pre class="language-bash" tabindex="0"><code class="language-bash">$ ./prometheus <span class="token parameter variable">--config.file</span><span class="token operator">=</span>prometheus.yml</code></pre>
+<p>Open your preferred browser and access <strong>http://localhost:9090</strong>. You now have
+prometheus UI in your browser.</p>
+<picture><source type="image/avif" srcset="/blog/prometheus-1/VT7M-yQr6a-2880.avif 2880w"><source type="image/webp" srcset="/blog/prometheus-1/VT7M-yQr6a-2880.webp 2880w"><img loading="lazy" decoding="async" src="/blog/prometheus-1/VT7M-yQr6a-2880.png" alt="Prometheus UI in browser" width="2880" height="996"></picture>
+<p>But what metrics are available? Where are they coming from? Check the targets
+scraped by Prometheus by clicking <strong>Status</strong> at the top menu and then click
+<strong>Targets</strong>.</p>
+<picture><source type="image/avif" srcset="/blog/prometheus-1/QCLX0TAWVW-2044.avif 2044w"><source type="image/webp" srcset="/blog/prometheus-1/QCLX0TAWVW-2044.webp 2044w"><img loading="lazy" decoding="async" src="/blog/prometheus-1/QCLX0TAWVW-2044.png" alt="Prometheus UI in browser" width="2044" height="670"></picture>
+<h2 id="config-file">Config file</h2>
+<p>To understand why you have 1 target the first time you run prometheus, read the
+content of <strong>prometheus.yml</strong> file.</p>
+<pre class="language-yaml" tabindex="0"><code class="language-yaml"><span class="token comment"># my global config</span>
+<span class="token key atrule">global</span><span class="token punctuation">:</span>
+  <span class="token key atrule">scrape_interval</span><span class="token punctuation">:</span> 15s <span class="token comment"># Set the scrape interval to every 15 seconds. Default is every 1 minute.</span>
+  <span class="token key atrule">evaluation_interval</span><span class="token punctuation">:</span> 15s <span class="token comment"># Evaluate rules every 15 seconds. The default is every 1 minute.</span>
+  <span class="token comment"># scrape_timeout is set to the global default (10s).</span>
+
+<span class="token comment"># Alertmanager configuration</span>
+<span class="token key atrule">alerting</span><span class="token punctuation">:</span>
+  <span class="token key atrule">alertmanagers</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">static_configs</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">targets</span><span class="token punctuation">:</span>
+          <span class="token comment"># - alertmanager:9093</span>
+
+<span class="token comment"># Load rules once and periodically evaluate them according to the global 'evaluation_interval'.</span>
+<span class="token key atrule">rule_files</span><span class="token punctuation">:</span>
+  <span class="token comment"># - "first_rules.yml"</span>
+  <span class="token comment"># - "second_rules.yml"</span>
+
+<span class="token comment"># A scrape configuration containing exactly one endpoint to scrape:</span>
+<span class="token comment"># Here it's Prometheus itself.</span>
+<span class="token key atrule">scrape_configs</span><span class="token punctuation">:</span>
+  <span class="token comment"># The job name is added as a label `job=&lt;job_name>` to any timeseries scraped from this config.</span>
+  <span class="token punctuation">-</span> <span class="token key atrule">job_name</span><span class="token punctuation">:</span> <span class="token string">"prometheus"</span>
+
+    <span class="token comment"># metrics_path defaults to '/metrics'</span>
+    <span class="token comment"># scheme defaults to 'http'.</span>
+
+    <span class="token key atrule">static_configs</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">targets</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"localhost:9090"</span><span class="token punctuation">]</span>
+</code></pre>
+<p>At the top level there are 4 fields: <code>global</code>, <code>alerting</code>, <code>rule_files</code>, and
+<code>scrape_configs</code>. Ignore <code>alerting</code> and <code>rule_files</code> for now. If you check the
+value <code>alerting</code>, the <code>targets</code> itself is empty. The same with <code>rule_files</code>. And
+we don't need them for now.</p>
+<p>The values in <code>global</code> are the default value for the rest of configuration when
+it applies. Inside <code>scraper_configs</code> there are items, each of them is a scrape
+config. Currently we have 1 item in <code>scrape_configs</code>, a scrape config with
+<code>prometheus</code> as the <code>job_name</code>. Let's change the value of <code>job_name</code> to <code>prome</code>.
+Stop the currently running prometheus in your terminal by pressing Ctrl-C. And
+run it back. It will use the updated config file.</p>
+<picture><source type="image/avif" srcset="/blog/prometheus-1/rBLpxuxuMT-2040.avif 2040w"><source type="image/webp" srcset="/blog/prometheus-1/rBLpxuxuMT-2040.webp 2040w"><img loading="lazy" decoding="async" src="/blog/prometheus-1/rBLpxuxuMT-2040.png" alt="Prometheus UI in browser" width="2040" height="814"></picture>
+<h2 id="conclusion">Conclusion</h2>
+<p>We conclude the post for now because it will be too long and too boring to read.
+In the next post I will write about the metrics provided by prometheus itself.
+Then after that we will install prometheus' node exporter to monitoring our
+local machine/laptop/PC.</p>
+
+<ul class="links-nextprev"><li class="links-nextprev-prev">← Previous<br> <a href="/blog/aws-sdk-authentication-in-aks/">AWS SDK Authentication on application running in Azure Kubernetes Service (Part 1)</a></li><li class="links-nextprev-next">Next →<br><a href="/blog/prometheus-2/">Prometheus&#39; Metrics</a></li>
+</ul>
+
+			</heading-anchors>
+		</main>
+
+		<footer>
+			<p><em>Built with <a href="https://www.11ty.dev/">Eleventy v3.0.0</a></em></p>
+		</footer>
+
+		<!-- This page `/blog/prometheus-1/` was built on 2025-03-07T14:48:35.041Z -->
+		<script type="module" src="/dist/rJ3_G-2ArF.js"></script>
+	</body>
+</html>
