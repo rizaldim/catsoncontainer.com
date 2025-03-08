@@ -1,3 +1,7 @@
 sync:
-	rsync -azP --delete --exclude Makefile . root@catsoncontainer.com:/var/www/html/
+	rsync -azP \
+		--delete \
+		--exclude Makefile \
+		--exclude .git \
+		. root@catsoncontainer.com:/var/www/html/
 

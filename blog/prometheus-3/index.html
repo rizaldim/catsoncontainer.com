@@ -1,569 +1,188 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>Monitor your own PC/laptop with Prometheus</title>
-		<meta name="description" content="Using prometheus to monitor resource on local machine">
-		<link rel="alternate" href="feed/feed.xml" type="application/atom+xml" title="Rizaldi&#39;s Personal Website">
-		
-		<style>/**
- * okaidia theme for JavaScript, CSS and HTML
- * Loosely based on Monokai textmate theme by http://www.monokai.nl/
- * @author ocodia
- */
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Using prometheus to monitor resource on local machine">
 
-code[class*="language-"],
-pre[class*="language-"] {
-	color: #f8f8f2;
-	background: none;
-	text-shadow: 0 1px rgba(0, 0, 0, 0.3);
-	font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-	font-size: 1em;
-	text-align: left;
-	white-space: pre;
-	word-spacing: normal;
-	word-break: normal;
-	word-wrap: normal;
-	line-height: 1.5;
+  <title>Monitor your own PC/laptop with Prometheus</title>
 
-	-moz-tab-size: 4;
-	-o-tab-size: 4;
-	tab-size: 4;
+  <link rel="alternate" href="feed/feed.xml" type="application/atom+xml" title="Rizaldi&#39;s Personal Website">
+</head>
 
-	-webkit-hyphens: none;
-	-moz-hyphens: none;
-	-ms-hyphens: none;
-	hyphens: none;
-}
+<body>
 
-/* Code blocks */
-pre[class*="language-"] {
-	padding: 1em;
-	margin: .5em 0;
-	overflow: auto;
-	border-radius: 0.3em;
-}
+<header>
+  <nav>
+    <h2>Top level navigation menu</h2>
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/blog/">Archive</a></li>
+      <li><a href="/about/">About</a></li>
+      <li><a href="/feed/feed.xml">Feed</a></li>
+    </ul>
+  </nav>
+</header>
 
-:not(pre) > code[class*="language-"],
-pre[class*="language-"] {
-	background: #272822;
-}
+<main>
+      
+<h1>Monitor your own PC/laptop with Prometheus</h1>
 
-/* Inline code */
-:not(pre) > code[class*="language-"] {
-	padding: .1em;
-	border-radius: .3em;
-	white-space: normal;
-}
-
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
-	color: #8292a2;
-}
-
-.token.punctuation {
-	color: #f8f8f2;
-}
-
-.token.namespace {
-	opacity: .7;
-}
-
-.token.property,
-.token.tag,
-.token.constant,
-.token.symbol,
-.token.deleted {
-	color: #f92672;
-}
-
-.token.boolean,
-.token.number {
-	color: #ae81ff;
-}
-
-.token.selector,
-.token.attr-name,
-.token.string,
-.token.char,
-.token.builtin,
-.token.inserted {
-	color: #a6e22e;
-}
-
-.token.operator,
-.token.entity,
-.token.url,
-.language-css .token.string,
-.style .token.string,
-.token.variable {
-	color: #f8f8f2;
-}
-
-.token.atrule,
-.token.attr-value,
-.token.function,
-.token.class-name {
-	color: #e6db74;
-}
-
-.token.keyword {
-	color: #66d9ef;
-}
-
-.token.regex,
-.token.important {
-	color: #fd971f;
-}
-
-.token.important,
-.token.bold {
-	font-weight: bold;
-}
-.token.italic {
-	font-style: italic;
-}
-
-.token.entity {
-	cursor: help;
-}
-/*
- * New diff- syntax
- */
-
-pre[class*="language-diff-"] {
-	--eleventy-code-padding: 1.25em;
-	padding-left: var(--eleventy-code-padding);
-	padding-right: var(--eleventy-code-padding);
-}
-.token.deleted {
-	background-color: hsl(0, 51%, 37%);
-	color: inherit;
-}
-.token.inserted {
-	background-color: hsl(126, 31%, 39%);
-	color: inherit;
-}
-
-/* Make the + and - characters unselectable for copy/paste */
-.token.prefix.unchanged,
-.token.prefix.inserted,
-.token.prefix.deleted {
-	-webkit-user-select: none;
-	user-select: none;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	padding-top: 2px;
-	padding-bottom: 2px;
-}
-.token.prefix.inserted,
-.token.prefix.deleted {
-	width: var(--eleventy-code-padding);
-	background-color: rgba(0,0,0,.2);
-}
-
-/* Optional: full-width background color */
-.token.inserted:not(.prefix),
-.token.deleted:not(.prefix) {
-	display: block;
-	margin-left: calc(-1 * var(--eleventy-code-padding));
-	margin-right: calc(-1 * var(--eleventy-code-padding));
-	text-decoration: none; /* override del, ins, mark defaults */
-	color: inherit; /* override del, ins, mark defaults */
-}
-/* This is an arbitrary CSS string added to the bundle */
-/* Defaults */
-:root {
-	--font-family: -apple-system, system-ui, sans-serif;
-	--font-family-monospace: Consolas, Menlo, Monaco, Andale Mono WT, Andale Mono, Lucida Console, Lucida Sans Typewriter, DejaVu Sans Mono, Bitstream Vera Sans Mono, Liberation Mono, Nimbus Mono L, Courier New, Courier, monospace;
-}
-
-/* Theme colors */
-:root {
-	--color-gray-20: #e0e0e0;
-	--color-gray-50: #C0C0C0;
-	--color-gray-90: #333;
-
-	--background-color: #fff;
-
-	--text-color: var(--color-gray-90);
-	--text-color-link: #082840;
-	--text-color-link-active: #5f2b48;
-	--text-color-link-visited: #17050F;
-
-	--syntax-tab-size: 2;
-}
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--color-gray-20: #e0e0e0;
-		--color-gray-50: #C0C0C0;
-		--color-gray-90: #dad8d8;
-
-		/* --text-color is assigned to --color-gray-_ above */
-		--text-color-link: #1493fb;
-		--text-color-link-active: #6969f7;
-		--text-color-link-visited: #a6a6f8;
-
-		--background-color: #15202b;
-	}
-}
-
-
-/* Global stylesheet */
-* {
-	box-sizing: border-box;
-}
-
-@view-transition {
-	navigation: auto;
-}
-
-html,
-body {
-	padding: 0;
-	margin: 0 auto;
-	font-family: var(--font-family);
-	color: var(--text-color);
-	background-color: var(--background-color);
-}
-html {
-	overflow-y: scroll;
-}
-body {
-	max-width: 80ch;
-}
-
-/* https://www.a11yproject.com/posts/how-to-hide-content/ */
-.visually-hidden {
-	clip: rect(0 0 0 0);
-	clip-path: inset(50%);
-	height: 1px;
-	overflow: hidden;
-	position: absolute;
-	white-space: nowrap;
-	width: 1px;
-}
-
-/* Fluid images via https://www.zachleat.com/web/fluid-images/ */
-img {
-  max-width: 100%;
-}
-img[width][height] {
-  height: auto;
-}
-img[src$=".svg"] {
-  width: 100%;
-  height: auto;
-  max-width: none;
-}
-
-p:last-child {
-	margin-bottom: 0;
-}
-p {
-	line-height: 1.5;
-}
-
-li {
-	line-height: 1.5;
-}
-
-a[href] {
-	color: var(--text-color-link);
-}
-a[href]:visited {
-	color: var(--text-color-link-visited);
-}
-a[href]:hover,
-a[href]:active {
-	color: var(--text-color-link-active);
-}
-
-main,
-footer {
-	padding: 1rem;
-}
-main :first-child {
-	margin-top: 0;
-}
-
-header {
-	border-bottom: 1px dashed var(--color-gray-20);
-}
-header:after {
-	content: "";
-	display: table;
-	clear: both;
-}
-
-.links-nextprev {
-	display: flex;
-	justify-content: space-between;
-	gap: .5em 1em;
-	list-style: "";
-	border-top: 1px dashed var(--color-gray-20);
-	padding: 1em 0;
-}
-.links-nextprev > * {
-	flex-grow: 1;
-}
-.links-nextprev-next {
-	text-align: right;
-}
-
-table {
-	margin: 1em 0;
-}
-table td,
-table th {
-	padding-right: 1em;
-}
-
-pre,
-code {
-	font-family: var(--font-family-monospace);
-}
-pre:not([class*="language-"]) {
-	margin: .5em 0;
-	line-height: 1.375; /* 22px /16 */
-	-moz-tab-size: var(--syntax-tab-size);
-	-o-tab-size: var(--syntax-tab-size);
-	tab-size: var(--syntax-tab-size);
-	-webkit-hyphens: none;
-	-ms-hyphens: none;
-	hyphens: none;
-	direction: ltr;
-	text-align: left;
-	white-space: pre;
-	word-spacing: normal;
-	word-break: normal;
-	overflow-x: auto;
-}
-code {
-	word-break: break-all;
-}
-
-/* Header */
-header {
-	display: flex;
-	gap: 1em .5em;
-	flex-wrap: wrap;
-	align-items: center;
-	padding: 1em;
-}
-.home-link {
-	font-size: 1em; /* 16px /16 */
-	font-weight: 700;
-	margin-right: 2em;
-}
-.home-link:link:not(:hover) {
-	text-decoration: none;
-}
-
-/* Nav */
-.nav {
-	display: flex;
-	padding: 0;
-	margin: 0;
-	list-style: none;
-}
-.nav-item {
-	display: inline-block;
-	margin-right: 1em;
-}
-.nav-item a[href]:not(:hover) {
-	text-decoration: none;
-}
-.nav a[href][aria-current="page"] {
-	text-decoration: underline;
-}
-
-/* Posts list */
-.postlist {
-	list-style: none;
-	padding: 0;
-	padding-left: 1.5rem;
-}
-.postlist-item {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	counter-increment: start-from -1;
-	margin-bottom: 1em;
-}
-.postlist-item:before {
-	display: inline-block;
-	pointer-events: none;
-	content: "" counter(start-from, decimal-leading-zero) ". ";
-	line-height: 100%;
-	text-align: right;
-	margin-left: -1.5rem;
-}
-.postlist-date,
-.postlist-item:before {
-	font-size: 0.8125em; /* 13px /16 */
-	color: var(--color-gray-90);
-}
-.postlist-date {
-	word-spacing: -0.5px;
-}
-.postlist-link {
-	font-size: 1.1875em; /* 19px /16 */
-	font-weight: 700;
-	flex-basis: calc(100% - 1.5rem);
-	padding-left: .25em;
-	padding-right: .5em;
-	text-underline-position: from-font;
-	text-underline-offset: 0;
-	text-decoration-thickness: 1px;
-}
-.postlist-item-active .postlist-link {
-	font-weight: bold;
-}
-
-/* Tags */
-.post-tag {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	text-transform: capitalize;
-	font-style: italic;
-}
-.postlist-item > .post-tag {
-	align-self: center;
-}
-
-/* Tags list */
-.post-metadata {
-	display: inline-flex;
-	flex-wrap: wrap;
-	gap: .5em;
-	list-style: none;
-	padding: 0;
-	margin: 0;
-}
-.post-metadata time {
-	margin-right: 1em;
-}</style>
-	</head>
-	<body>
-		<a href="#skip" class="visually-hidden">Skip to main content</a>
-
-		<header>
-			<a href="/" class="home-link">Rizaldi&#39;s Personal Website</a>
-			<nav>
-				<h2 class="visually-hidden" id="top-level-navigation-menu">Top level navigation menu</h2>
-				<ul class="nav">
-					<li class="nav-item"><a href="/">Home</a></li>
-					<li class="nav-item"><a href="/blog/">Archive</a></li>
-					<li class="nav-item"><a href="/about/">About</a></li>
-					<li class="nav-item"><a href="/feed/feed.xml">Feed</a></li>
-				</ul>
-			</nav>
-		</header>
-
-		<main id="skip">
-			<heading-anchors>
-				
-<h1 id="monitor-your-own-pc-laptop-with-prometheus">Monitor your own PC/laptop with Prometheus</h1>
-
-<ul class="post-metadata">
-	<li><time datetime="2024-07-02">02 July 2024</time></li>
-	<li><a href="/tags/prometheus/" class="post-tag">prometheus</a></li>
+<ul>
+  <li><time datetime="2024-07-02">02 July 2024</time></li>
+  <li><a href="/tags/prometheus/">prometheus</a></li>
 </ul>
 
-<p>Prometheus provides an exporter to help us monitor our machine or server. We
+<p>
+Prometheus provides an exporter to help us monitor our machine or server. We
 can use that to monitor our own PC/laptop. The exporter is called node
 exporter. You can find the link to download the binary on
 <a href="https://github.com/prometheus/node_exporter/releases">the node exporter releases page</a>. Select the latest relese and then download
 the tar gz file
 that suit your machine operating system and architecture. At the time of this
 writing, the latest version is 1.8.1. If you are using windows, you can use
-<a href="https://github.com/prometheus-community/windows_exporter">windows exporter</a> instead of node exporter.</p>
+<a href="https://github.com/prometheus-community/windows_exporter">windows exporter</a> instead of node exporter.
+</p>
+
 <p>Once downloaded, extract the file.</p>
-<pre class="language-bash" tabindex="0"><code class="language-bash">$ <span class="token function">tar</span> xzvf node_exporter-1.8.1.darwin-arm64.tar.gz</code></pre>
+
+<pre class="language-bash" tabindex="0">
+<code class="language-bash">
+$ tar xzvf node_exporter-1.8.1.darwin-arm64.tar.gz
+</code>
+</pre>
+
 <p>Change into the extracted directory and run the binary file.</p>
-<pre class="language-bash" tabindex="0"><code class="language-bash">$ <span class="token builtin class-name">cd</span> node_exporter-1.8.1.darwin-arm64
-$ ./node_exporter</code></pre>
-<p>Read the last line of the output messages. It shows the address that you can then
-open in your browser.</p>
-<pre class="language-shell" tabindex="0"><code class="language-shell"><span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.523Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:193 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">msg</span><span class="token operator">=</span><span class="token string">"Starting node_exporter"</span> <span class="token assign-left variable">version</span><span class="token operator">=</span><span class="token string">"(version=1.8.1, branch=HEAD, revision=400c3979931613db930ea035f39ce7b377cdbb5b)"</span>
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.525Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:194 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">msg</span><span class="token operator">=</span><span class="token string">"Build context"</span> <span class="token assign-left variable">build_context</span><span class="token operator">=</span><span class="token string">"(go=go1.22.3, platform=darwin/arm64, user=root@0ed3c8b67453, date=20240521-18:39:09, tags=unknown)"</span>
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.526Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>filesystem_common.go:111 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>filesystem <span class="token assign-left variable">msg</span><span class="token operator">=</span><span class="token string">"Parsed flag --collector.filesystem.mount-points-exclude"</span> <span class="token assign-left variable">flag</span><span class="token operator">=</span>^/<span class="token punctuation">(</span>dev<span class="token punctuation">)</span><span class="token punctuation">(</span>$<span class="token operator">|</span>/<span class="token punctuation">)</span>
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>filesystem_common.go:113 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>filesystem <span class="token assign-left variable">msg</span><span class="token operator">=</span><span class="token string">"Parsed flag --collector.filesystem.fs-types-exclude"</span> <span class="token assign-left variable">flag</span><span class="token operator">=</span>^devfs$
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:111 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">msg</span><span class="token operator">=</span><span class="token string">"Enabled collectors"</span>
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>boottime
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>cpu
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>diskstats
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>filesystem
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>loadavg
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>meminfo
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>netdev
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>os
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>powersupplyclass
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>textfile
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>thermal
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>time
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.527Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>node_exporter.go:118 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">collector</span><span class="token operator">=</span>uname
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.528Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>tls_config.go:313 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">msg</span><span class="token operator">=</span><span class="token string">"Listening on"</span> <span class="token assign-left variable">address</span><span class="token operator">=</span><span class="token punctuation">[</span>::<span class="token punctuation">]</span>:9100
-<span class="token assign-left variable">ts</span><span class="token operator">=</span><span class="token number">2024</span>-07-02T14:06:34.528Z <span class="token assign-left variable">caller</span><span class="token operator">=</span>tls_config.go:316 <span class="token assign-left variable">level</span><span class="token operator">=</span>info <span class="token assign-left variable">msg</span><span class="token operator">=</span><span class="token string">"TLS is disabled."</span> <span class="token assign-left variable">http2</span><span class="token operator">=</span>false <span class="token assign-left variable">address</span><span class="token operator">=</span><span class="token punctuation">[</span>::<span class="token punctuation">]</span>:9100</code></pre>
-<p>In my output it shows <code>address=[::]:9100</code>. It means that I can get the metrics
+
+<pre class="language-bash" tabindex="0">
+<code class="language-bash">
+$ cd node_exporter-1.8.1.darwin-arm64
+$ ./node_exporter
+</code>
+</pre>
+
+<p>
+Read the last line of the output messages. It shows the address that you can then
+open in your browser.
+</p>
+
+<pre class="language-shell" tabindex="0">
+<code class="language-shell">
+ts=2024-07-02T14:06:34.523Z caller=node_exporter.go:193 level=info msg="Starting node_exporter" version="(version=1.8.1, branch=HEAD, revision=400c3979931613db930ea035f39ce7b377cdbb5b)"
+ts=2024-07-02T14:06:34.525Z caller=node_exporter.go:194 level=info msg="Build context" build_context="(go=go1.22.3, platform=darwin/arm64, user=root@0ed3c8b67453, date=20240521-18:39:09, tags=unknown)"
+ts=2024-07-02T14:06:34.526Z caller=filesystem_common.go:111 level=info collector=filesystem msg="Parsed flag --collector.filesystem.mount-points-exclude" flag=^/(dev)($|/)
+ts=2024-07-02T14:06:34.527Z caller=filesystem_common.go:113 level=info collector=filesystem msg="Parsed flag --collector.filesystem.fs-types-exclude" flag=^devfs$
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:111 level=info msg="Enabled collectors"
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=boottime
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=cpu
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=diskstats
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=filesystem
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=loadavg
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=meminfo
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=netdev
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=os
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=powersupplyclass
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=textfile
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=thermal
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=time
+ts=2024-07-02T14:06:34.527Z caller=node_exporter.go:118 level=info collector=uname
+ts=2024-07-02T14:06:34.528Z caller=tls_config.go:313 level=info msg="Listening on" address=[::]:9100
+ts=2024-07-02T14:06:34.528Z caller=tls_config.go:316 level=info msg="TLS is disabled." http2=false address=[::]:9100
+</code>
+</pre>
+
+<p>
+In my output it shows <code>address=[::]:9100</code>. It means that I can get the metrics
 from node exporter at <strong>localhost:9100</strong>. When I open the address, it opens a
-webpage.</p>
-<picture><source type="image/avif" srcset="/blog/prometheus-3/_aq-Wa9U0L-1878.avif 1878w"><source type="image/webp" srcset="/blog/prometheus-3/_aq-Wa9U0L-1878.webp 1878w"><img loading="lazy" decoding="async" src="/blog/prometheus-3/_aq-Wa9U0L-1878.png" alt="Node exporter home page" width="1878" height="772"></picture>
-<p>Click the <strong>Metrics</strong> link. It will shows the metrics exposed by node exporter.</p>
-<picture><source type="image/avif" srcset="/blog/prometheus-3/sCZFu7fI8o-1782.avif 1782w"><source type="image/webp" srcset="/blog/prometheus-3/sCZFu7fI8o-1782.webp 1782w"><img loading="lazy" decoding="async" src="/blog/prometheus-3/sCZFu7fI8o-1782.png" alt="Node exporter metrics" width="1782" height="1072"></picture>
-<p>Now it's time to scrape those metrics using prometheus. Change into the prometheus
+webpage.
+</p>
+
+<picture>
+  <source type="image/avif" srcset="/blog/prometheus-3/_aq-Wa9U0L-1878.avif 1878w">
+  <source type="image/webp" srcset="/blog/prometheus-3/_aq-Wa9U0L-1878.webp 1878w">
+  <img loading="lazy" decoding="async" src="/blog/prometheus-3/_aq-Wa9U0L-1878.png" alt="Node exporter home page" width="1878" height="772">
+</picture>
+
+<p>
+Click the <strong>Metrics</strong> link. It will shows the metrics exposed by node exporter.
+</p>
+
+<picture>
+  <source type="image/avif" srcset="/blog/prometheus-3/sCZFu7fI8o-1782.avif 1782w">
+  <source type="image/webp" srcset="/blog/prometheus-3/sCZFu7fI8o-1782.webp 1782w">
+  <img loading="lazy" decoding="async" src="/blog/prometheus-3/sCZFu7fI8o-1782.png" alt="Node exporter metrics" width="1782" height="1072">
+</picture>
+
+<p>
+Now it's time to scrape those metrics using prometheus. Change into the prometheus
 directory, created in <a href="/posts/prometheus-1/">the first post about prometheus</a>. At the end of the
-config yaml file, add these lines:</p>
-<pre class="language-yaml" tabindex="0"><code class="language-yaml">  <span class="token punctuation">-</span> <span class="token key atrule">job_name</span><span class="token punctuation">:</span> <span class="token string">"node_exporter"</span>
-    <span class="token key atrule">static_configs</span><span class="token punctuation">:</span>
-      <span class="token punctuation">-</span> <span class="token key atrule">targets</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"localhost:9100"</span><span class="token punctuation">]</span></code></pre>
+config yaml file, add these lines:
+</p>
+
+<pre class="language-yaml" tabindex="0">
+<code class="language-yaml">
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["localhost:9100"]
+</code>
+</pre>
+
 <p>The whole config yaml file now should have the following content.</p>
-<pre class="language-yaml" tabindex="0"><code class="language-yaml"><span class="token key atrule">global</span><span class="token punctuation">:</span>
-  <span class="token key atrule">scrape_interval</span><span class="token punctuation">:</span> 15s
-  <span class="token key atrule">evaluation_interval</span><span class="token punctuation">:</span> 15s
 
-<span class="token key atrule">alerting</span><span class="token punctuation">:</span>
-  <span class="token key atrule">alertmanagers</span><span class="token punctuation">:</span>
-    <span class="token punctuation">-</span> <span class="token key atrule">static_configs</span><span class="token punctuation">:</span>
-        <span class="token punctuation">-</span> <span class="token key atrule">targets</span><span class="token punctuation">:</span>
+<pre class="language-yaml" tabindex="0">
+<code class="language-yaml">
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
 
-<span class="token key atrule">rule_files</span><span class="token punctuation">:</span>
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
 
-<span class="token key atrule">scrape_configs</span><span class="token punctuation">:</span>
-  <span class="token punctuation">-</span> <span class="token key atrule">job_name</span><span class="token punctuation">:</span> <span class="token string">"prome"</span>
-    <span class="token key atrule">static_configs</span><span class="token punctuation">:</span>
-      <span class="token punctuation">-</span> <span class="token key atrule">targets</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"localhost:9090"</span><span class="token punctuation">]</span>
-  <span class="token punctuation">-</span> <span class="token key atrule">job_name</span><span class="token punctuation">:</span> <span class="token string">"node_exporter"</span>
-    <span class="token key atrule">static_configs</span><span class="token punctuation">:</span>
-      <span class="token punctuation">-</span> <span class="token key atrule">targets</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"localhost:9100"</span><span class="token punctuation">]</span></code></pre>
+rule_files:
+
+scrape_configs:
+  - job_name: "prome"
+    static_configs:
+      - targets: ["localhost:9090"]
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["localhost:9100"]
+</code>
+</pre>
+
 <p>Run the prometheus.</p>
-<pre class="language-bash" tabindex="0"><code class="language-bash">$ ./prometheus <span class="token parameter variable">--config.file</span> prometheus.yml</code></pre>
-<p>Open the prometheus targets page at <strong>localhost:9090/targets</strong>. It should now
-show 2 targets.</p>
-<picture><source type="image/avif" srcset="/blog/prometheus-3/rBLpxuxuMT-2040.avif 2040w"><source type="image/webp" srcset="/blog/prometheus-3/rBLpxuxuMT-2040.webp 2040w"><img loading="lazy" decoding="async" src="/blog/prometheus-3/rBLpxuxuMT-2040.png" alt="Prometheus with 2 targets" width="2040" height="814"></picture>
-<p>With that you can query the metrics and graph them using
-<a href="localhost:9090/graph">the graph page in prometheus</a>.</p>
-<p>That's it for now. In the next post, we are going to use grafana to create
-dashboard for monitoring our machine.</p>
 
-<ul class="links-nextprev"><li class="links-nextprev-prev">← Previous<br> <a href="/blog/prometheus-2/">Prometheus&#39; Metrics</a></li><li class="links-nextprev-next">Next →<br><a href="/blog/nix-brew/">Replacing brew with nix</a></li>
-</ul>
+<pre class="language-bash" tabindex="0">
+<code class="language-bash">
+$ ./prometheus --config.file prometheus.yml
+</code>
+</pre>
 
-			</heading-anchors>
-		</main>
+<p>
+Open the prometheus targets page at <strong>localhost:9090/targets</strong>. It should now
+show 2 targets.
+</p>
 
-		<footer>
-			<p><em>Built with <a href="https://www.11ty.dev/">Eleventy v3.0.0</a></em></p>
-		</footer>
+<picture>
+  <source type="image/avif" srcset="/blog/prometheus-3/rBLpxuxuMT-2040.avif 2040w">
+  <source type="image/webp" srcset="/blog/prometheus-3/rBLpxuxuMT-2040.webp 2040w">
+  <img loading="lazy" decoding="async" src="/blog/prometheus-3/rBLpxuxuMT-2040.png" alt="Prometheus with 2 targets" width="2040" height="814">
+</picture>
 
-		<!-- This page `/blog/prometheus-3/` was built on 2025-03-07T14:48:35.041Z -->
-		<script type="module" src="/dist/rJ3_G-2ArF.js"></script>
-	</body>
+<p>
+With that you can query the metrics and graph them using
+<a href="localhost:9090/graph">the graph page in prometheus</a>.
+</p>
+
+<p>
+That's it for now. In the next post, we are going to use grafana to create
+dashboard for monitoring our machine.
+</p>
+
+</main>
+
+</body>
+
 </html>

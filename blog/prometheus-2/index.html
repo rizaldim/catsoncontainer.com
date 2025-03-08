@@ -1,555 +1,188 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>Prometheus&#39; Metrics</title>
-		<meta name="description" content="A bit about Prometheus&#39; metrics">
-		<link rel="alternate" href="feed/feed.xml" type="application/atom+xml" title="Rizaldi&#39;s Personal Website">
-		
-		<style>/**
- * okaidia theme for JavaScript, CSS and HTML
- * Loosely based on Monokai textmate theme by http://www.monokai.nl/
- * @author ocodia
- */
 
-code[class*="language-"],
-pre[class*="language-"] {
-	color: #f8f8f2;
-	background: none;
-	text-shadow: 0 1px rgba(0, 0, 0, 0.3);
-	font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-	font-size: 1em;
-	text-align: left;
-	white-space: pre;
-	word-spacing: normal;
-	word-break: normal;
-	word-wrap: normal;
-	line-height: 1.5;
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A bit about Prometheus&#39; metrics">
 
-	-moz-tab-size: 4;
-	-o-tab-size: 4;
-	tab-size: 4;
+  <title>Prometheus&#39; Metrics</title>
 
-	-webkit-hyphens: none;
-	-moz-hyphens: none;
-	-ms-hyphens: none;
-	hyphens: none;
-}
+  <link rel="alternate" href="feed/feed.xml" type="application/atom+xml" title="Rizaldi&#39;s Personal Website">
+</head>
 
-/* Code blocks */
-pre[class*="language-"] {
-	padding: 1em;
-	margin: .5em 0;
-	overflow: auto;
-	border-radius: 0.3em;
-}
+<body>
 
-:not(pre) > code[class*="language-"],
-pre[class*="language-"] {
-	background: #272822;
-}
+<header>
+  <nav>
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/blog/">Archive</a></li>
+      <li><a href="/about/">About</a></li>
+      <li><a href="/feed/feed.xml">Feed</a></li>
+    </ul>
+  </nav>
+</header>
 
-/* Inline code */
-:not(pre) > code[class*="language-"] {
-	padding: .1em;
-	border-radius: .3em;
-	white-space: normal;
-}
-
-.token.comment,
-.token.prolog,
-.token.doctype,
-.token.cdata {
-	color: #8292a2;
-}
-
-.token.punctuation {
-	color: #f8f8f2;
-}
-
-.token.namespace {
-	opacity: .7;
-}
-
-.token.property,
-.token.tag,
-.token.constant,
-.token.symbol,
-.token.deleted {
-	color: #f92672;
-}
-
-.token.boolean,
-.token.number {
-	color: #ae81ff;
-}
-
-.token.selector,
-.token.attr-name,
-.token.string,
-.token.char,
-.token.builtin,
-.token.inserted {
-	color: #a6e22e;
-}
-
-.token.operator,
-.token.entity,
-.token.url,
-.language-css .token.string,
-.style .token.string,
-.token.variable {
-	color: #f8f8f2;
-}
-
-.token.atrule,
-.token.attr-value,
-.token.function,
-.token.class-name {
-	color: #e6db74;
-}
-
-.token.keyword {
-	color: #66d9ef;
-}
-
-.token.regex,
-.token.important {
-	color: #fd971f;
-}
-
-.token.important,
-.token.bold {
-	font-weight: bold;
-}
-.token.italic {
-	font-style: italic;
-}
-
-.token.entity {
-	cursor: help;
-}
-/*
- * New diff- syntax
- */
-
-pre[class*="language-diff-"] {
-	--eleventy-code-padding: 1.25em;
-	padding-left: var(--eleventy-code-padding);
-	padding-right: var(--eleventy-code-padding);
-}
-.token.deleted {
-	background-color: hsl(0, 51%, 37%);
-	color: inherit;
-}
-.token.inserted {
-	background-color: hsl(126, 31%, 39%);
-	color: inherit;
-}
-
-/* Make the + and - characters unselectable for copy/paste */
-.token.prefix.unchanged,
-.token.prefix.inserted,
-.token.prefix.deleted {
-	-webkit-user-select: none;
-	user-select: none;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	padding-top: 2px;
-	padding-bottom: 2px;
-}
-.token.prefix.inserted,
-.token.prefix.deleted {
-	width: var(--eleventy-code-padding);
-	background-color: rgba(0,0,0,.2);
-}
-
-/* Optional: full-width background color */
-.token.inserted:not(.prefix),
-.token.deleted:not(.prefix) {
-	display: block;
-	margin-left: calc(-1 * var(--eleventy-code-padding));
-	margin-right: calc(-1 * var(--eleventy-code-padding));
-	text-decoration: none; /* override del, ins, mark defaults */
-	color: inherit; /* override del, ins, mark defaults */
-}
-/* This is an arbitrary CSS string added to the bundle */
-/* Defaults */
-:root {
-	--font-family: -apple-system, system-ui, sans-serif;
-	--font-family-monospace: Consolas, Menlo, Monaco, Andale Mono WT, Andale Mono, Lucida Console, Lucida Sans Typewriter, DejaVu Sans Mono, Bitstream Vera Sans Mono, Liberation Mono, Nimbus Mono L, Courier New, Courier, monospace;
-}
-
-/* Theme colors */
-:root {
-	--color-gray-20: #e0e0e0;
-	--color-gray-50: #C0C0C0;
-	--color-gray-90: #333;
-
-	--background-color: #fff;
-
-	--text-color: var(--color-gray-90);
-	--text-color-link: #082840;
-	--text-color-link-active: #5f2b48;
-	--text-color-link-visited: #17050F;
-
-	--syntax-tab-size: 2;
-}
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--color-gray-20: #e0e0e0;
-		--color-gray-50: #C0C0C0;
-		--color-gray-90: #dad8d8;
-
-		/* --text-color is assigned to --color-gray-_ above */
-		--text-color-link: #1493fb;
-		--text-color-link-active: #6969f7;
-		--text-color-link-visited: #a6a6f8;
-
-		--background-color: #15202b;
-	}
-}
-
-
-/* Global stylesheet */
-* {
-	box-sizing: border-box;
-}
-
-@view-transition {
-	navigation: auto;
-}
-
-html,
-body {
-	padding: 0;
-	margin: 0 auto;
-	font-family: var(--font-family);
-	color: var(--text-color);
-	background-color: var(--background-color);
-}
-html {
-	overflow-y: scroll;
-}
-body {
-	max-width: 80ch;
-}
-
-/* https://www.a11yproject.com/posts/how-to-hide-content/ */
-.visually-hidden {
-	clip: rect(0 0 0 0);
-	clip-path: inset(50%);
-	height: 1px;
-	overflow: hidden;
-	position: absolute;
-	white-space: nowrap;
-	width: 1px;
-}
-
-/* Fluid images via https://www.zachleat.com/web/fluid-images/ */
-img {
-  max-width: 100%;
-}
-img[width][height] {
-  height: auto;
-}
-img[src$=".svg"] {
-  width: 100%;
-  height: auto;
-  max-width: none;
-}
-
-p:last-child {
-	margin-bottom: 0;
-}
-p {
-	line-height: 1.5;
-}
-
-li {
-	line-height: 1.5;
-}
-
-a[href] {
-	color: var(--text-color-link);
-}
-a[href]:visited {
-	color: var(--text-color-link-visited);
-}
-a[href]:hover,
-a[href]:active {
-	color: var(--text-color-link-active);
-}
-
-main,
-footer {
-	padding: 1rem;
-}
-main :first-child {
-	margin-top: 0;
-}
-
-header {
-	border-bottom: 1px dashed var(--color-gray-20);
-}
-header:after {
-	content: "";
-	display: table;
-	clear: both;
-}
-
-.links-nextprev {
-	display: flex;
-	justify-content: space-between;
-	gap: .5em 1em;
-	list-style: "";
-	border-top: 1px dashed var(--color-gray-20);
-	padding: 1em 0;
-}
-.links-nextprev > * {
-	flex-grow: 1;
-}
-.links-nextprev-next {
-	text-align: right;
-}
-
-table {
-	margin: 1em 0;
-}
-table td,
-table th {
-	padding-right: 1em;
-}
-
-pre,
-code {
-	font-family: var(--font-family-monospace);
-}
-pre:not([class*="language-"]) {
-	margin: .5em 0;
-	line-height: 1.375; /* 22px /16 */
-	-moz-tab-size: var(--syntax-tab-size);
-	-o-tab-size: var(--syntax-tab-size);
-	tab-size: var(--syntax-tab-size);
-	-webkit-hyphens: none;
-	-ms-hyphens: none;
-	hyphens: none;
-	direction: ltr;
-	text-align: left;
-	white-space: pre;
-	word-spacing: normal;
-	word-break: normal;
-	overflow-x: auto;
-}
-code {
-	word-break: break-all;
-}
-
-/* Header */
-header {
-	display: flex;
-	gap: 1em .5em;
-	flex-wrap: wrap;
-	align-items: center;
-	padding: 1em;
-}
-.home-link {
-	font-size: 1em; /* 16px /16 */
-	font-weight: 700;
-	margin-right: 2em;
-}
-.home-link:link:not(:hover) {
-	text-decoration: none;
-}
-
-/* Nav */
-.nav {
-	display: flex;
-	padding: 0;
-	margin: 0;
-	list-style: none;
-}
-.nav-item {
-	display: inline-block;
-	margin-right: 1em;
-}
-.nav-item a[href]:not(:hover) {
-	text-decoration: none;
-}
-.nav a[href][aria-current="page"] {
-	text-decoration: underline;
-}
-
-/* Posts list */
-.postlist {
-	list-style: none;
-	padding: 0;
-	padding-left: 1.5rem;
-}
-.postlist-item {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: baseline;
-	counter-increment: start-from -1;
-	margin-bottom: 1em;
-}
-.postlist-item:before {
-	display: inline-block;
-	pointer-events: none;
-	content: "" counter(start-from, decimal-leading-zero) ". ";
-	line-height: 100%;
-	text-align: right;
-	margin-left: -1.5rem;
-}
-.postlist-date,
-.postlist-item:before {
-	font-size: 0.8125em; /* 13px /16 */
-	color: var(--color-gray-90);
-}
-.postlist-date {
-	word-spacing: -0.5px;
-}
-.postlist-link {
-	font-size: 1.1875em; /* 19px /16 */
-	font-weight: 700;
-	flex-basis: calc(100% - 1.5rem);
-	padding-left: .25em;
-	padding-right: .5em;
-	text-underline-position: from-font;
-	text-underline-offset: 0;
-	text-decoration-thickness: 1px;
-}
-.postlist-item-active .postlist-link {
-	font-weight: bold;
-}
-
-/* Tags */
-.post-tag {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	text-transform: capitalize;
-	font-style: italic;
-}
-.postlist-item > .post-tag {
-	align-self: center;
-}
-
-/* Tags list */
-.post-metadata {
-	display: inline-flex;
-	flex-wrap: wrap;
-	gap: .5em;
-	list-style: none;
-	padding: 0;
-	margin: 0;
-}
-.post-metadata time {
-	margin-right: 1em;
-}</style>
-	</head>
-	<body>
-		<a href="#skip" class="visually-hidden">Skip to main content</a>
-
-		<header>
-			<a href="/" class="home-link">Rizaldi&#39;s Personal Website</a>
-			<nav>
-				<h2 class="visually-hidden" id="top-level-navigation-menu">Top level navigation menu</h2>
-				<ul class="nav">
-					<li class="nav-item"><a href="/">Home</a></li>
-					<li class="nav-item"><a href="/blog/">Archive</a></li>
-					<li class="nav-item"><a href="/about/">About</a></li>
-					<li class="nav-item"><a href="/feed/feed.xml">Feed</a></li>
-				</ul>
-			</nav>
-		</header>
-
-		<main id="skip">
-			<heading-anchors>
-				
+<main>
+      
 <h1 id="prometheus-metrics">Prometheus&#39; Metrics</h1>
 
-<ul class="post-metadata">
-	<li><time datetime="2024-06-24">24 June 2024</time></li>
-	<li><a href="/tags/prometheus/" class="post-tag">prometheus</a></li>
+<ul>
+  <li><time datetime="2024-06-24">24 June 2024</time></li>
+  <li><a href="/tags/prometheus/">prometheus</a></li>
 </ul>
 
-<p>Continuing from the <a href="/posts/prometheus-1">previous post</a>, let's check on the
-metrics provided by prometheus.</p>
-<h2 id="the-metrics">The metrics</h2>
-<p>If you go back to Prometheus UI on the targets page, there is one target
+<p>
+Continuing from the <a href="/posts/prometheus-1">previous post</a>, let's check on the
+metrics provided by prometheus.
+</p>
+
+<h2>The metrics</h2>
+
+<p>
+If you go back to Prometheus UI on the targets page, there is one target
 currently watched by prometheus. The endpoint for that target is
 <a href="http://localhost:9090/metrics">http://localhost:9090/metrics</a>. So by default
-when you run prometheus, it will also serve its own metrics at port 9090.</p>
+when you run prometheus, it will also serve its own metrics at port 9090.
+</p>
+
 <p>Click the link on the targets page, you will see the metrics.</p>
-<picture><source type="image/avif" srcset="/blog/prometheus-2/IY60_P70E6-2294.avif 2294w"><source type="image/webp" srcset="/blog/prometheus-2/IY60_P70E6-2294.webp 2294w"><img loading="lazy" decoding="async" src="/blog/prometheus-2/IY60_P70E6-2294.png" alt="Prometheus targets" width="2294" height="1022"></picture>
-<picture><source type="image/avif" srcset="/blog/prometheus-2/R4atf8psl1-2080.avif 2080w"><source type="image/webp" srcset="/blog/prometheus-2/R4atf8psl1-2080.webp 2080w"><img loading="lazy" decoding="async" src="/blog/prometheus-2/R4atf8psl1-2080.png" alt="Prometheus metrics" width="2080" height="592"></picture>
-<p>Each line in that page is a metric, except for line started with a #, which are
+
+<picture>
+  <source type="image/avif" srcset="/blog/prometheus-2/IY60_P70E6-2294.avif 2294w">
+  <source type="image/webp" srcset="/blog/prometheus-2/IY60_P70E6-2294.webp 2294w">
+  <img loading="lazy" decoding="async" src="/blog/prometheus-2/IY60_P70E6-2294.png" alt="Prometheus targets" width="2294" height="1022">
+</picture>
+
+<picture>
+  <source type="image/avif" srcset="/blog/prometheus-2/R4atf8psl1-2080.avif 2080w">
+  <source type="image/webp" srcset="/blog/prometheus-2/R4atf8psl1-2080.webp 2080w">
+  <img loading="lazy" decoding="async" src="/blog/prometheus-2/R4atf8psl1-2080.png" alt="Prometheus metrics" width="2080" height="592">
+</picture>
+
+<p>
+Each line in that page is a metric, except for line started with a #, which are
 the documentation for the metric that comes after those lines. For example the
 very first metric called <strong>go_gc_cycles_automatic_gc_cycles_total</strong>. In the page
-it's shown like this.</p>
-<pre class="language-promql" tabindex="0"><code class="language-promql"><span class="token comment"># HELP go_gc_cycles_automatic_gc_cycles_total Count of completed GC cycles generated by the Go runtime.</span>
-<span class="token comment"># TYPE go_gc_cycles_automatic_gc_cycles_total counter</span>
-go_gc_cycles_automatic_gc_cycles_total <span class="token number">16</span></code></pre>
-<p>The first line, which is started with <code># HELP</code>, is the description of the metric.
+it's shown like this.
+</p>
+
+<pre class="language-promql" tabindex="0">
+<code class="language-promql">
+# HELP go_gc_cycles_automatic_gc_cycles_total Count of completed GC cycles generated by the Go runtime.
+# TYPE go_gc_cycles_automatic_gc_cycles_total counter
+go_gc_cycles_automatic_gc_cycles_total 16
+</code>
+</pre>
+
+<p>
+The first line, which is started with <code># HELP</code>, is the description of the metric.
 The second line, which is started with <code># TYPE</code>, is the type of the metric,
 <strong>counter</strong>. It is one of metric types in prometheus. The third line is the
-metric and its value. Notice that it has no unit, only the value.</p>
-<h2 id="the-labels">The labels</h2>
-<p>While reading the metrics you might notice that some metrics have curly braces
-with some kind of key-value pair in it. Like,</p>
-<pre class="language-promql" tabindex="0"><code class="language-promql">go_gc_heap_allocs_by_size_bytes_bucket<span class="token context-labels"><span class="token punctuation">{</span><span class="token label-key attr-name">le</span><span class="token punctuation">=</span><span class="token label-value attr-value">"8.999999999999998"</span><span class="token punctuation">}</span></span> <span class="token number">19461</span>
-go_gc_heap_allocs_by_size_bytes_bucket<span class="token context-labels"><span class="token punctuation">{</span><span class="token label-key attr-name">le</span><span class="token punctuation">=</span><span class="token label-value attr-value">"24.999999999999996"</span><span class="token punctuation">}</span></span> <span class="token number">130267</span>
-go_gc_heap_allocs_by_size_bytes_bucket<span class="token context-labels"><span class="token punctuation">{</span><span class="token label-key attr-name">le</span><span class="token punctuation">=</span><span class="token label-value attr-value">"64.99999999999999"</span><span class="token punctuation">}</span></span> <span class="token number">304207</span></code></pre>
+metric and its value. Notice that it has no unit, only the value.
+</p>
+
+<h2>The labels</h2>
+
+<p>
+While reading the metrics you might notice that some metrics have curly braces
+with some kind of key-value pair in it. Like,
+</p>
+
+<pre class="language-promql" tabindex="0">
+<code class="language-promql">
+go_gc_heap_allocs_by_size_bytes_bucket{le="8.999999999999998"} 19461
+go_gc_heap_allocs_by_size_bytes_bucket{le="24.999999999999996"} 130267
+go_gc_heap_allocs_by_size_bytes_bucket{le="64.99999999999999"} 304207
+</code>
+</pre>
+
 <p>or,</p>
-<pre class="language-promql" tabindex="0"><code class="language-promql">prometheus_engine_query_duration_seconds<span class="token context-labels"><span class="token punctuation">{</span><span class="token label-key attr-name">slice</span><span class="token punctuation">=</span><span class="token label-value attr-value">"inner_eval"</span><span class="token punctuation">,</span><span class="token label-key attr-name">quantile</span><span class="token punctuation">=</span><span class="token label-value attr-value">"0.5"</span><span class="token punctuation">}</span></span> <span class="token number">0.000583584</span>
-prometheus_engine_query_duration_seconds<span class="token context-labels"><span class="token punctuation">{</span><span class="token label-key attr-name">slice</span><span class="token punctuation">=</span><span class="token label-value attr-value">"inner_eval"</span><span class="token punctuation">,</span><span class="token label-key attr-name">quantile</span><span class="token punctuation">=</span><span class="token label-value attr-value">"0.9"</span><span class="token punctuation">}</span></span> <span class="token number">0.000583584</span>
-prometheus_engine_query_duration_seconds<span class="token context-labels"><span class="token punctuation">{</span><span class="token label-key attr-name">slice</span><span class="token punctuation">=</span><span class="token label-value attr-value">"inner_eval"</span><span class="token punctuation">,</span><span class="token label-key attr-name">quantile</span><span class="token punctuation">=</span><span class="token label-value attr-value">"0.99"</span><span class="token punctuation">}</span></span> <span class="token number">0.000583584</span></code></pre>
-<p>Those are labels. The keys in those pairs are the label name and the values are
+
+<pre class="language-promql" tabindex="0">
+<code class="language-promql">
+prometheus_engine_query_duration_seconds{slice="inner_eval",quantile="0.5"} 0.000583584
+prometheus_engine_query_duration_seconds{slice="inner_eval",quantile="0.9"} 0.000583584
+prometheus_engine_query_duration_seconds{slice="inner_eval",quantile="0.99"} 0.000583584
+</code>
+</pre>
+
+<p>
+Those are labels. The keys in those pairs are the label name and the values are
 the label values. For now, for the prometheus metrics that we don't really
 understand, the labels might not make a lot of sense. Later on when we use it
 with <a href="https://prometheus.io/docs/guides/node-exporter/">node exporter</a>
-it will make a lot more sense.</p>
-<h2 id="metrics-scraping">Metrics scraping</h2>
-<p>So basically for the one target that the prometheus is monitoring currently,
+it will make a lot more sense.
+</p>
+
+<h2>Metrics scraping</h2>
+
+<p>
+So basically for the one target that the prometheus is monitoring currently,
 prometheus will get the metrics from the endpoint, localhost:9090/metrics, and
 store it. How often prometheus scrapes the metrics is determined by the
-configuration used. So if we go back to the <strong>prometheus.yaml</strong> file,</p>
-<pre class="language-yaml" tabindex="0"><code class="language-yaml"><span class="token key atrule">global</span><span class="token punctuation">:</span>
-  <span class="token key atrule">scrape_interval</span><span class="token punctuation">:</span> 15s <span class="token comment"># Set the scrape interval to every 15 seconds. Default is every 1 minute.</span>
-  <span class="token key atrule">evaluation_interval</span><span class="token punctuation">:</span> 15s <span class="token comment"># Evaluate rules every 15 seconds. The default is every 1 minute.</span></code></pre>
+configuration used. So if we go back to the <strong>prometheus.yaml</strong> file,
+</p>
+
+<pre class="language-yaml" tabindex="0">
+<code class="language-yaml">
+global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+</code>
+</pre>
+
 <p>, we can see that prometheus scrapes the metric every 15 seconds.</p>
-<h2 id="the-graph">The graph</h2>
-<p>One last thing before we finished this post, prometheus helps us to graph our
-metrics by providing a graph page. It's on the top menu of the prometheus UI.</p>
-<picture><source type="image/avif" srcset="/blog/prometheus-2/bkkpto5Qmh-1936.avif 1936w"><source type="image/webp" srcset="/blog/prometheus-2/bkkpto5Qmh-1936.webp 1936w"><img loading="lazy" decoding="async" src="/blog/prometheus-2/bkkpto5Qmh-1936.png" alt="Prometheus UI top menu" width="1936" height="116"></picture>
-<p>Click <strong>Graph</strong> and it will open the graph page. On that page, there is a field
+
+<h2>The graph</h2>
+
+<p>
+One last thing before we finished this post, prometheus helps us to graph our
+metrics by providing a graph page. It's on the top menu of the prometheus UI.
+</p>
+
+<picture>
+  <source type="image/avif" srcset="/blog/prometheus-2/bkkpto5Qmh-1936.avif 1936w">
+  <source type="image/webp" srcset="/blog/prometheus-2/bkkpto5Qmh-1936.webp 1936w">
+  <img loading="lazy" decoding="async" src="/blog/prometheus-2/bkkpto5Qmh-1936.png" alt="Prometheus UI top menu" width="1936" height="116">
+</picture>
+
+<p>
+Click <strong>Graph</strong> and it will open the graph page. On that page, there is a field
 to input the expression for metrics. Let's type in <strong>go_gc_cycles_total_gc_cycles_total</strong>. It's one of metrics with type counter. So a counter metrics is a metrics
 with value that always go up. After you type in the metrics name, click the
-<strong>Execute</strong> button. It will show you its current value.</p>
-<picture><source type="image/avif" srcset="/blog/prometheus-2/I-VfR_BIH--2862.avif 2862w"><source type="image/webp" srcset="/blog/prometheus-2/I-VfR_BIH--2862.webp 2862w"><img loading="lazy" decoding="async" src="/blog/prometheus-2/I-VfR_BIH--2862.png" alt="Prometheus metrics table" width="2862" height="706"></picture>
-<p>Below the field to type in the expression, there is a <strong>Graph</strong> tab just at the right
-side of <strong>Table</strong>. Click on that and it will show you the graph of the metrics.</p>
-<picture><source type="image/avif" srcset="/blog/prometheus-2/iOQpnmwjJW-2840.avif 2840w"><source type="image/webp" srcset="/blog/prometheus-2/iOQpnmwjJW-2840.webp 2840w"><img loading="lazy" decoding="async" src="/blog/prometheus-2/iOQpnmwjJW-2840.png" alt="Prometheus metrics graph" width="2840" height="1306"></picture>
-<h2 id="conclusion">Conclusion</h2>
-<p>In this post, we discuss a little bit about prometheus' metrics and labels. Also
+<strong>Execute</strong> button. It will show you its current value.
+</p>
+
+<picture>
+  <source type="image/avif" srcset="/blog/prometheus-2/I-VfR_BIH--2862.avif 2862w">
+  <source type="image/webp" srcset="/blog/prometheus-2/I-VfR_BIH--2862.webp 2862w">
+  <img loading="lazy" decoding="async" src="/blog/prometheus-2/I-VfR_BIH--2862.png" alt="Prometheus metrics table" width="2862" height="706">
+</picture>
+
+<p>
+Below the field to type in the expression, there is a <strong>Graph</strong> tab just at the right
+side of <strong>Table</strong>. Click on that and it will show you the graph of the metrics.
+</p>
+
+<picture>
+  <source type="image/avif" srcset="/blog/prometheus-2/iOQpnmwjJW-2840.avif 2840w">
+  <source type="image/webp" srcset="/blog/prometheus-2/iOQpnmwjJW-2840.webp 2840w">
+  <img loading="lazy" decoding="async" src="/blog/prometheus-2/iOQpnmwjJW-2840.png" alt="Prometheus metrics graph" width="2840" height="1306">
+</picture>
+
+<h2>Conclusion</h2>
+
+<p>
+In this post, we discuss a little bit about prometheus' metrics and labels. Also
 we discuss about how to see the graph of a metrics. In the next post, we will use
-prometheus' node exporter to monitor our local machine's CPU and memory usage.</p>
+prometheus' node exporter to monitor our local machine's CPU and memory usage.
+</p>
 
-<ul class="links-nextprev"><li class="links-nextprev-prev">← Previous<br> <a href="/blog/prometheus-1/">Prometheus - Getting started</a></li><li class="links-nextprev-next">Next →<br><a href="/blog/prometheus-3/">Monitor your own PC/laptop with Prometheus</a></li>
-</ul>
 
-			</heading-anchors>
-		</main>
+</main>
 
-		<footer>
-			<p><em>Built with <a href="https://www.11ty.dev/">Eleventy v3.0.0</a></em></p>
-		</footer>
+</body>
 
-		<!-- This page `/blog/prometheus-2/` was built on 2025-03-07T14:48:35.041Z -->
-		<script type="module" src="/dist/rJ3_G-2ArF.js"></script>
-	</body>
 </html>
