@@ -14,7 +14,7 @@ jobs:
           node-version: "23"
       - run: npm install
       - run: npx @11ty/eleventy
-      - uses: bcomnes/deploy-to-neocities@v1 # deploy!
+      - uses: bcomnes/deploy-to-neocities@v3 # deploy!
         with: # config for the action
           api_token: ${{ secrets.NEOCITIES_API_KEY }}
           dist_dir: "_site/" # my build output directory
