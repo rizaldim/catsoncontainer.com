@@ -9,6 +9,11 @@ jobs:
     runs-on: ubuntu-latest # the system the runner uses
     steps:
       - uses: actions/checkout@v4 # checkout the repo
+      - uses: actions/setup-node@v3 # install node.js
+        with:
+          node-version: "23"
+      - run: npm install
+      - run: npx @11ty/eleventy
       - uses: bcomnes/deploy-to-neocities@v1 # deploy!
         with: # config for the action
           api_token: ${{ secrets.NEOCITIES_API_KEY }}
