@@ -51,8 +51,13 @@ a:not([class]) {
 /* Make images easier to work with */
 img,
 picture {
-  max-width: 100%;
+  border: 1px solid #eee;
+  margin-top: 2em;
+  margin-bottom: 2em;
+
   display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 /* Inherit fonts for inputs and buttons */

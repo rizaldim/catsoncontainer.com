@@ -18,6 +18,9 @@ a {
 }
 
 header {
+  max-width: 80ch;
+  margin: 0 auto;
+
   & .site-title {
     font-family: bungeeshade;
     font-size: 3rem;
@@ -31,3 +34,7 @@ header {
   }
 }
 
+main {
+  max-width: 80ch;
+  margin: 0 auto;
+}
