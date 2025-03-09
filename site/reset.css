@@ -27,7 +27,6 @@ ol[role='list'] {
 
 /* Set core body defaults */
 body {
-  min-height: 100vh;
   line-height: 1.5;
 }
 
@@ -72,5 +71,4 @@ textarea:not([rows]) {
 :target {
   scroll-margin-block: 5ex;
 }
-
 
