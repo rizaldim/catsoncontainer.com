@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Blog about devops, working in tech, movies, sports, etc">
+
+  <title>Cats on container</title>
+
+  <link rel="stylesheet" href="/style/reset.css">
+  <link rel="stylesheet" href="/style/style.css">
+
+  <link rel="alternate" href="feed/feed.xml" type="application/atom+xml" title="Cats on container">
+</head>
+
+<body>
+
+<header>
+  <div class="site-title">cats on container</div>
+  <nav>
+    <ul role="list">
+      <li><a href="/">Home</a></li>
+      <li><a href="/about/">About</a></li>
+      <li><a href="/feed/feed.xml">Feed</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Trying out nix and my experiment on using it to replace homebrew on MacOS">
+
+  <title>Replacing brew with nix</title>
+
+  <link rel="stylesheet" href="/reset.css">
+  <link rel="stylesheet" href="/style.css">
+
+  <link rel="alternate" href="feed/feed.xml" type="application/atom+xml" title="Cats on container">
+</head>
+
+<body>
+
+<header>
+  <nav>
+    <h2 id="top-level-navigation-menu">Top level navigation menu</h2>
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/blog/">Archive</a></li>
+      <li><a href="/about/">About</a></li>
+      <li><a href="/feed/feed.xml">Feed</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main id="skip">
+    
+<h1>Replacing brew with nix</h1>
+
+<ul>
+  <li><time datetime="2024-07-15">15 July 2024</time></li>
+  <li><a href="/tags/nix/">nix</a>, </li>
+  <li><a href="/tags/package-manager/">package-manager</a></li>
+</ul>
+
+<p>
+I've been meaning to try <a href="https://nixos.org/">nix</a> for a while now. I forgot when is the exact
+time that I read about it for the first time but after reading a bit about it I
+have this idea of using nix to replace Ansible for managing servers. In the
+sense that configuring the server in a deterministic way.
+</p>
+
+<p>
+So last weekend I tried it out. A couple reading materials that I use as the
+guidance:
+</p>
+
+<ul>
+  <li><a href="https://nix.dev/tutorials/first-steps/">The tutorial from nix.dev</a></li>
+  <li><a href="https://zero-to-nix.com/">Zero to nix</a></li>
+  <li><a href="https://jvns.ca/categories/nix/">Julia Evans' posts about nix</a></li>
+</ul>
+
+<p>
+Julia Evans' posts really help a lot. She wrote it in the perspective of a new
+user. I can understand a few early pages in the tutorial on nix.dev and zero-to-nix
+but after that I kind of get lost. Like it got complicated fast.
+</p>
+
+<p>
+So I decided to take it easy. For now I am just using it to replace homebrew
+as my machine's package manager. Two concerns that I have with installing packages
+using nix:
+</p>
+
+<ul>
+  <li>Is it safe?</li>
+  <li>Does nix have all the packages that I need now and later on in the future?</li>
+</ul>
+
+<p>
+For the first question I think, from the perspective of someone like me who
+more often than not just blindly run <code>brew install a-package</code> up until now, it's
+as safe as using brew. One thing that's neat with the nix package in nixos.org
+is that there is a link to the source.
+</p>
+
+<p>
+For example, the neovim package. At the time that I write this the source is
+defined by
+<a href="https://github.com/NixOS/nixpkgs/blob/nixos-24.05/pkgs/by-name/ne/neovim-unwrapped/package.nix#L189">
+the package.nix file in nixpkgs repository in GitHub</a>. Granted that
+currently I don't fully understand the file right now, but the more I learn nix
+the more I can make sense of what makes a package as defined in the package.nix
+file.
+</p>
+
+<p>For the second question, so far I think nix have all the packages that I need.</p>
+
+<p>So for now, anytime I want to install a package I just run <code>nix profile install</code>.</p>
+
+</main>
+
+</body>
+</html>
+
+
+</main>
+
+</body>
+</html>

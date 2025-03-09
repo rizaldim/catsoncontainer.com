@@ -1,0 +1,106 @@
+      
+<h1>Using Pulumi with multiple AWS accounts and S3 backend</h1>
+
+<ul>
+  <li><time datetime="2023-12-24">24 December 2023</time></li>
+  <li><a href="/tags/pulumi/">pulumi</a></li>
+</ul>
+
+<p>
+The way I usually use <a href="https://www.terraform.io/">Terraform</a> is by storing each environment's state
+in different buckets. So the state for my development environment will be stored
+in an S3 bucket in the AWS account for development and the state for my staging
+environment will be stored in an S3 bucket in the staging account. The same thing
+with my production environment.
+</p>
+
+<p>
+I just started using <a href="https://pulumi.com">Pulumi</a> for about 3 weeks now and I tried to do
+the same thing. I got confused trying to figure out how to do it the same way I
+do it with Terraform. So, I searched online on how to do that and I found <a href="https://github.com/pulumi/pulumi/issues/3567">an
+issue in GitHub</a>. <a href="https://github.com/pulumi/pulumi/issues/11182#issuecomment-1297367585">A Pulumi engineer suggested the
+OP</a> to use environment variable to switch between backends.
+</p>
+
+<p>
+I think it is feasible to do that. Anytime you want to change stack, for example
+to production stack, you then need to do:
+</p>
+
+<pre class="language-bash" tabindex="0">
+<code class="language-bash">
+export PULUMI_BACKEND_URL="s3://bucket-for-pulumi-production"
+pulumi stack select production
+</code>
+</pre>
+
+<p>
+I might also create a function to do that, add it into my bash profile, so that
+instead of running 2 commands I can just run the function.
+</p>
+
+<p>
+But then I thought &quot;Why not just use the same backend for all stacks?&quot;. I think
+it's simpler. I only then need to find a way to tell Pulumi to which AWS account
+a stack refers to, since my resources are separated into different AWS accounts
+based on the environment.
+</p>
+
+<p>So I have <code>~/.aws/config</code> file like this:</p>
+
+<pre class="language-toml" tabindex="0">
+<code class="language-toml">
+[profile org-dev]
+...
+
+[profile org-staging]
+...
+
+[profile org-production]
+...
+
+</code>
+</pre>
+
+<p>
+with <strong>org-dev</strong>, <strong>org-staging</strong>, and <strong>org-production</strong> as AWS profiles for your
+work's development, staging, and production environments respectively. I need
+to define this AWS profile as a config for my Pulumi stack. We can do this
+using <code>pulumi config</code> command (<a href="https://www.pulumi.com/docs/cli/commands/pulumi_config/">docs</a>).
+</p>
+
+<p>
+So, for example I have a stack named <strong>development</strong>, then I run:
+</p>
+
+<pre class="language-bash" tabindex="0">
+<code class="language-bash">
+pulumi stack select development
+pulumi config set aws:profile org-dev
+</code>
+</pre>
+
+<p>
+This way, anytime I am using <strong>development</strong> stack, Pulumi knows that I am
+managing resources in <strong>org-dev</strong> AWS profile.
+</p>
+
+<p>
+Also to tell Pulumi that I want to have my backend in a bucket in my production
+AWS account I need to add this line in <code>Pulumi.yaml</code> file:
+</p>
+
+<pre class="language-yaml" tabindex="0">
+<code class="language-yaml">
+....
+backend:
+  url: s3://bucket-for-pulumi-state?region=my-region&awssdk=v2&profile=org-production
+....
+</code>
+</pre>
+
+<p>
+That's it. Pulumi now knows where I store the state and using which AWS account.
+Also it knows a stack refers to resources in which AWS account.
+</p>
+

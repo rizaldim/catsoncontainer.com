@@ -1,0 +1,186 @@
+<h1>Lessons learned making things work between AKS and Azure WAF</h1>
+
+<ul>
+  <li><time datetime="2025-01-05">05 January 2025</time></li>
+  <li><a href="/tags/azure-waf/" class="post-tag">azure-waf</a>, </li>
+  <li><a href="/tags/azure-kubernetes-service/" class="post-tag">azure-kubernetes-service</a></li>
+</ul>
+
+<p>
+The last few months because of work I do some experiments on using Azure Kubernetes
+Service (AKS) and securing the services hosted on it using Azure WAF. In short,
+I need to host services in AKS but I also need to utilize Azure WAF as a security
+layer for those services. This post is about the things I learned while I do
+the experiment.
+</p>
+
+<h2>Context</h2>
+
+<p>
+From
+<a href="https://learn.microsoft.com/en-us/azure/web-application-firewall/overview">Azure WAF docs</a>:
+</p>
+
+<blockquote>
+  <p>
+  Web Application Firewall (WAF) provides centralized protection of your web applications
+  from common exploits and vulnerabilities. Web applications are increasingly targeted
+  by malicious attacks that exploit commonly known vulnerabilities. SQL injection and
+  cross-site scripting are among the most common attacks.
+  </p>
+</blockquote>
+
+<p>
+Azure WAF is more or less the same with
+<a href="https://aws.amazon.com/waf/">AWS WAF</a>
+or other WAF products out there.
+</p>
+
+<p>
+From the same docs page, I found out that Azure WAF can be deployed with
+Azure Application Gateway, Azure Front Door, and Azure Content Delivery Network
+from Microsoft. Azure Front Door itself is a type of CDN. So I focus on the first
+option, Azure Application Gateway.
+</p>
+
+<h2>The problem with Application Gateway Ingress Controller (AGIC)</h2>
+
+<p>
+Azure provides
+<a href="https://learn.microsoft.com/en-us/azure/application-gateway/ingress-controller-overview">Ingress controller</a>
+for services running inside a kubernetes cluster and use Azure Application Gateway
+as gateway into the cluster.
+</p>
+
+<p>
+The way it works is the cluster admin creates an Ingress object with
+<code>azure-application-gateway</code> as <code>.spec.ingressClassName</code>. The AGIC controller
+installed inside the cluster will detect this and from the Ingress specification
+it will list the services accessible through that Ingress. Then the controller
+will sync the App Gateway's rules, listeners, and backends to match the Ingress
+specification.
+</p>
+
+<p>
+At first this seemed to work just as I expected it. The problems arise when
+there is a new deployment. So the Application Gateway backends will record
+the IP addresses of the pods related to a service. When there is a new deployment,
+those IP addresses will change since the pods from the old deployment will be
+replaced by the new ones. From my observation the changes is not applied as
+seamless as it should be.
+</p>
+
+<p>
+What I did is I curl into my service's health check, give it a 1-second
+duration to wait and I loop it. I create a new deployment and I apply it.
+In my experiment there was a 15-second period where the curl return 502.
+While doing the curl, I also monitor the Endpoint object of the Service object.
+The changes were applied almost instantly. I suspect the problem arouse because
+when the AGIC sync the changes with the Application Gateway's backend pools
+the changes were not applied instantly.
+</p>
+
+<h2>Azure Front Door and The Private Link</h2>
+
+<p>
+Since I stuck with App Gateway, I decided to experiment with Azure Front Door.
+After reading the documentation, I understand that the way to use Azure Front
+Door with AKS is to use my cluster load balancer as one of the origins of an
+Azure Front Door instance.
+</p>
+
+<p>
+If you google <strong>AKS Azure Front Door</strong>, the first link is
+<a href="https://learn.microsoft.com/en-us/azure/architecture/example-scenario/aks-front-door/aks-front-door">this documentation</a>
+in Azure Architecture Center. It's quite complicated. After reading it a couple
+of times, and only understanding just a fraction of it, I found that there is
+something called a Private Link service in Azure.
+</p>
+
+<p>From <a href="https://learn.microsoft.com/en-us/azure/private-link/private-link-overview">Azure docs</a>:</p>
+
+<blockquote>
+  <p>
+  Azure Private Link enables you to access Azure PaaS Services
+  (for example, Azure Storage and SQL Database) and
+  Azure hosted customer-owned/partner services over a private endpoint in your virtual network.
+  </p>
+</blockquote>
+
+<p>
+Maybe I can use Private Link to get access to my cluster's load balancer and
+then I can make my load balancer only accessible from the Private Link? That
+would make it more secure right? Then I found out that Azure Front Door
+private link is
+<a href="https://learn.microsoft.com/en-us/azure/frontdoor/private-link#region-availability">not yet available in South East Asia region</a>.
+</p>
+
+<h2>App Gateway and NodePort-type Service object</h2>
+
+<p>
+So I plan to use
+<a href="https://projectcontour.io/">Contour</a>
+as my cluster Ingress controller. By default Contour run as service of type <strong>LoadBalancer</strong>. But
+it turns out I can opt to run it as type <strong>NodePort</strong>. By doing this I assumed
+that I can create a backend pool in my Appliation Gateway as Virtual Machine
+Scale Set type. It means that I can define a backend as the cluster nodes and
+the port based on the definition of the service used by Contour.
+</p>
+
+<p>
+When I tried to do it this way it worked for a while. But the thing is there is
+a time, I think it's usually once in a week or 2 weeks, where AKS just decides
+to replace my nodes with new nodes. Completely replace all the nodes. Usually
+it happens in the morning. With this setup when this happened, the backend pool
+somehow forgets where it points to. I checked the name of the old vm scale set
+and the new one. It had the same name. Granted the nodes inside the scale set were
+different but the name was the same.
+</p>
+
+<p>
+The way that I can think of to work around this is to somehow detect when
+nodes replacement happens and when it does then make sure the backend in the
+Application Gateway points to the VM scale set. But there must be a better way, I thought to
+myself.
+</p>
+
+<h2>IP Address Filtering and Front Door identifier</h2>
+
+<p>It turns out there is
+<a href="https://learn.microsoft.com/en-us/azure/frontdoor/origin-security?tabs=aks-nginx&amp;pivots=front-door-standard-premium">a whole page</a>
+dedicated on how to secure traffic toAzure Front Door origins. For AKS load
+balancer there are 2 options: use <code>X-Azure-FDID</code> request header to filter request
+and/or use IP address filtering.
+</p>
+
+<p>
+The latter is easier to implement with Contour. Using Contour's
+<a href="https://projectcontour.io/docs/1.30/config/fundamentals/#httpproxy-fundamentals">HTTPProxy</a>
+I can use a <a href="https://projectcontour.io/docs/1.30/config/api/#projectcontour.io/v1.HeaderMatchCondition">HeaderMatchCondition</a>
+to check whether an incoming request has the expected value for <code>X-Azure-FDID</code>
+header. If it doesn't the Ingress controller will immediately return 403. If it
+does, the request is passed into the expected service.
+</p>
+
+<p>
+The second option is a bit more challenging. The IP addresses of the Azure Front
+Door edge nodes can change over time. Azure provide
+<a href="https://www.microsoft.com/en-us/download/details.aspx?id=56519">a download link</a>
+to get the whole Azure Ip ranges and service tags. Using the data in this file
+I can regularly update the IP filtering in the Contour's HTTP Proxies or Ingresses
+to filter out unwanted requests.
+</p>
+
+<h2>Conclusion</h2>
+
+<p>
+To use Azure WAF to secure my AKS cluster I need to set up my cluster either by
+using Azure App Gateway or Azure Front Door. Using App Gateway Ingress Controller
+provided by Azure I found that the service can be down for up to 30 seconds
+when there is a new deployment
+because the changes in the App Gateway's backend pools is not instantaneous. Using
+Contour as <strong>NodePort</strong> service is also not possible at this point. Using
+Front Door, I can utilize filtering based on Front Door identifier in request
+header and IP addresses to filter out unwanted request coming into my cluster.
+</p>
+

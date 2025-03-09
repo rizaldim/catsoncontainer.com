@@ -1,0 +1,33 @@
+:root {
+  --system-ui: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+@font-face {
+  font-family: 'bungeeshade';
+  src: url('/fonts/BungeeShade-Regular.ttf') format('truetype');
+}
+
+body {
+  font-family: var(--system-ui);
+  background-color: #f6f6f6;
+  color: #333;
+}
+
+a {
+  text-decoration-style: dashed;
+}
+
+header {
+  & .site-title {
+    font-family: bungeeshade;
+    font-size: 3rem;
+    line-height: 1.5;
+  }
+
+  nav ul {
+    padding: 0;
+    display: flex;
+    gap: 1em;
+  }
+}
+
