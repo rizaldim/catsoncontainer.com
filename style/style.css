@@ -7,6 +7,11 @@
   src: url('/fonts/BungeeShade-Regular.ttf') format('truetype');
 }
 
+@font-face {
+  font-family: 'caesar-dressing';
+  src: url('/fonts/CaesarDressing-Regular.ttf') format('truetype');
+}
+
 body {
   font-family: var(--system-ui);
   color: #333;
@@ -54,8 +59,9 @@ header {
     text-orientation: upright;
     text-transform: uppercase;
 
-    font-size: 1.2em;
-    color: #ccc;
+    font-size: 1.4em;
+    font-family: "caesar-dressing";
+    color: white;
 
     padding: 1em .5em;
     a {
@@ -80,3 +86,13 @@ main {
   border: 1px solid black;
   margin: 0 auto;
 }
+
+footer {
+  min-height: 80px;
+  border: 1px double black;
+  border-bottom: 0;
+
+  max-width: 80ch;
+  margin: 2em auto 0;
+}
+
