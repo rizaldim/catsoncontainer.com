@@ -9,8 +9,9 @@
 
 body {
   font-family: var(--system-ui);
-  background-color: #f6f6f6;
   color: #333;
+
+  margin: 0;
 }
 
 a {
@@ -19,22 +20,47 @@ a {
 
 header {
   max-width: 80ch;
-  margin: 0 auto;
+  margin: 0 auto 4em;
+  
 
   & .site-title {
     font-family: bungeeshade;
-    font-size: 3rem;
-    line-height: 1.5;
+    font-size: 4rem;
+    line-height: 1.2;
+
+    padding: 1rem;
+
+    border-width: 5px;
+    border-style: dotted;
+    border-top: 0;
+
+    span {
+      display: block;
+    }
+
   }
 
-  nav ul {
-    padding: 0;
+  ul {
     display: flex;
-    gap: 1em;
+
+    padding: 0;
+    padding-left: 2rem; 
+    margin: 0;
   }
+
+  li {
+    padding: .4em 1em;
+
+    a {
+      text-decoration: none;
+    }
+  }
+
 }
 
 main {
   max-width: 80ch;
+  padding: 1em;
+  border: 1px solid black;
   margin: 0 auto;
 }
