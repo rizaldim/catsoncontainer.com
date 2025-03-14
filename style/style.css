@@ -8,8 +8,8 @@
 }
 
 @font-face {
-  font-family: 'caesar-dressing';
-  src: url('/fonts/CaesarDressing-Regular.ttf') format('truetype');
+  font-family: 'saira-stencil';
+  src: url('/fonts/SairaStencilOne-Regular.ttf') format('truetype');
 }
 
 body {
@@ -23,12 +23,21 @@ a {
   text-decoration-style: dashed;
 }
 
-
 main {
   max-width: 80ch;
   padding: 1em;
-  border: 1px solid black;
+  border-width: 5px;
+  border-style: dashed;
+  border-radius: 1em;
   margin: 0 auto;
+}
+
+main.index h2 {
+  font-family: "saira-stencil";
+}
+
+main.index h3 {
+  font-family: "saira-stencil";
 }
 
 footer {
@@ -40,3 +49,20 @@ footer {
   margin: 2em auto 0;
 }
 
+ol.posts span.date {
+  font-family: "saira-stencil";
+  font-size: 1.2em;
+  padding: .2em;
+}
+
+ol.posts li {
+  display: flex;
+  align-items: center;
+}
+
+footer {
+  border-width: 5px;
+  border-style: dashed;
+  border-radius: 1em 1em 0 0;
+  border-bottom: 0;
+}
