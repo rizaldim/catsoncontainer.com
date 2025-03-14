@@ -23,62 +23,6 @@ a {
   text-decoration-style: dashed;
 }
 
-header {
-  max-width: 80ch;
-  margin: 0 auto 4em;
-  
-  display: flex;
-
-  border-width: 5px;
-  border-style: double;
-  border-top: 0;
-
-  & .site-title {
-    font-family: bungeeshade;
-    font-size: 4rem;
-    line-height: 1.2;
-
-    padding: 1rem;
-
-    span {
-      display: block;
-    }
-
-  }
-
-  ul {
-    display: flex;
-    height: 100%;
-
-    padding: 0;
-    margin: 0;
-  }
-
-  li {
-    writing-mode: vertical-rl;
-    text-orientation: upright;
-    text-transform: uppercase;
-
-    font-size: 1.4em;
-    font-family: "caesar-dressing";
-    color: white;
-
-    padding: 1em .5em;
-    a {
-      text-decoration: none;
-      width: 100%;
-      height: 100%;
-    }
-  }
-
-  li:first-child {
-    background-color: red;
-  }
-  li:nth-child(2) {
-    background-color: black;
-  }
-
-}
 
 main {
   max-width: 80ch;
