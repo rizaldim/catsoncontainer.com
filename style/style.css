@@ -26,10 +26,9 @@ a {
 main {
   max-width: 80ch;
   padding: 1em;
-  border-width: 5px;
-  border-style: dashed;
-  border-radius: 1em;
   margin: 0 auto;
+
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' stroke='black' stroke-width='4' stroke-dasharray='2%2c 8' stroke-dashoffset='0' stroke-linecap='round'/%3e%3c/svg%3e");
 }
 
 main.index h2 {
@@ -63,7 +62,5 @@ ol.posts li {
 footer {
   padding: 1em;
 
-  border-width: 5px;
-  border-style: dashed;
-  border-radius: 1em;
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' stroke='black' stroke-width='10' stroke-dasharray='15%2c 15%2c 1' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
 }
