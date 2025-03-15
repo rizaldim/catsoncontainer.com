@@ -1,0 +1,12 @@
+pre {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  padding: 1em;
+  background-color: #222;
+
+  white-space: pre-wrap;
+}
+
+pre code {
+  color: #ddd;
+}
