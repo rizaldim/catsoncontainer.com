@@ -20,6 +20,10 @@ header .site-title {
   margin-bottom: 1rem;
 }
 
+header .site-title a {
+  text-decoration: none;
+}
+
 header ul {
   padding: 0;
   padding-right: 2em;
