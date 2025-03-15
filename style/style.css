@@ -19,8 +19,29 @@ body {
   margin: 0;
 }
 
+h1 {
+  text-wrap-style: balance;
+  text-align: center;
+}
+
 a {
   text-decoration-style: dashed;
+}
+
+p.postDate {
+  text-align: center;
+}
+
+ul.tagsList {
+  display: flex;
+  padding: 0;
+  margin: 0;
+  justify-content: center;
+  column-gap: .5em;
+}
+
+ul.tagsList li:before {
+  content: '#';
 }
 
 main {
