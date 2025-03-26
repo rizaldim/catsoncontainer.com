@@ -63,7 +63,7 @@ header ul {
 
 main {
   padding: 1em;
-  margin-top: 1em;
+  margin-top: 2em;
   margin-bottom: 1em;
   max-width: 100ch;
 }
@@ -75,7 +75,7 @@ main.index {
   }
 
   h2:not(first-child) {
-    margin-top: 1.5em;
+    margin-top: 1em;
   }
 
   ol.posts {
