@@ -34,6 +34,26 @@ h3 {
   font-size: var(--size-600);
 }
 
+pre {
+  margin-top: 2em;
+  margin-bottom: 2em;
+  padding: 1em;
+  background-color: #222;
+
+  white-space: pre-wrap;
+}
+
+code {
+  font-family: "JetBrains Mono", monospace;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
+
+pre code {
+  color: #ddd;
+}
+
 header ul {
   margin: 0;
   padding: 0;
