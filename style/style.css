@@ -17,9 +17,13 @@ body {
   font-size: var(--size-400);
 }
 
-header {
+header.top {
   border-bottom: 2px dashed black;
   padding: .6em 1em;
+}
+
+h1 {
+  font-size: var(--size-800);
 }
 
 h2 {
@@ -41,6 +45,7 @@ main {
   padding: 1em;
   margin-top: 1em;
   margin-bottom: 1em;
+  max-width: 100ch;
 }
 
 main.index {
@@ -55,6 +60,24 @@ main.index {
 
   ol.posts {
     padding-left: 1em;
+  }
+}
+
+main.post {
+  header {
+    border-bottom: 6px double black;
+    padding-bottom: 1em;
+  }
+
+  header + * {
+    margin-top: 1.6em;
+  }
+
+  ul.tagsList {
+    padding: 0;
+    margin: 0;
+    display: flex;
+    column-gap: 1em;
   }
 }
 

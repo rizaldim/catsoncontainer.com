@@ -1,4 +1,5 @@
 {
-  "layout": "blogPost.njk"
+  "layout": "blogPost.njk",
+  "mainClass": "post"
 }
 
