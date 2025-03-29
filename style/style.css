@@ -41,6 +41,7 @@ pre {
   background-color: #222;
 
   white-space: pre-wrap;
+  overflow: scroll;
 }
 
 code {
